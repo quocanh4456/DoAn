@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsNumber, Min, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateRouteDto {
   @ApiPropertyOptional({ example: 'TP. Hồ Chí Minh' })
@@ -16,12 +17,14 @@ export class UpdateRouteDto {
 
   @ApiPropertyOptional({ example: 310 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   distance?: number;
 
   @ApiPropertyOptional({ example: 250000 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   basePrice?: number;

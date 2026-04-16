@@ -59,8 +59,8 @@ export function ManageRoutesPage() {
     setForm({
       origin: route.origin,
       destination: route.destination,
-      distance: route.distance,
-      basePrice: route.basePrice,
+      distance: Number(route.distance),
+      basePrice: Number(route.basePrice),
     });
     setOpen(true);
   };
@@ -77,8 +77,8 @@ export function ManageRoutesPage() {
       }
       setOpen(false);
       fetchRoutes();
-    } catch {
-      toast.error('Thao tác thất bại');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Thao tác thất bại');
     }
   };
 

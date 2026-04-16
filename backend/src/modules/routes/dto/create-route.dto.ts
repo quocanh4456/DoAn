@@ -1,5 +1,6 @@
 import { IsNotEmpty, IsString, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateRouteDto {
   @ApiProperty({ example: 'TP. Hồ Chí Minh' })
@@ -13,11 +14,13 @@ export class CreateRouteDto {
   destination: string;
 
   @ApiProperty({ example: 310 })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   distance: number;
 
   @ApiProperty({ example: 250000 })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   basePrice: number;
