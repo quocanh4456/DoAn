@@ -1,132 +1,254 @@
-# TÀI LIỆU YÊU CẦU NGHIỆP VỤ (BUSINESS REQUIREMENT DOCUMENT)
+# VinaCoach
 
-## 1. TỔNG QUAN DỰ ÁN (PROJECT OVERVIEW)
+He thong dat ve xe khach truc tuyen va quan ly van hanh nha xe.
 
-### 1.1. Bối cảnh & Vấn đề (Context)
-Bên cạnh đó, một loại hình dịch vụ vận tải hành khách đang rất phát triển hiện nay là dịch vụ sử dụng xe cỡ nhỏ và cỡ trung chất lượng cao, nhắm vào đối tượng khách hàng có thu nhập trung bình và trung bình khá. Đặc thù của mô hình này là hành khách thường là khách quen của nhà xe và có nhu cầu được đón và trả tại nhà. Việc thiếu một công cụ kết nối hiệu quả giữa nhà xe và hành khách trong các nhu cầu di chuyển hàng ngày đang làm giảm đi tính tiện lợi và an toàn của dịch vụ
+Project gom:
+- `frontend`: ung dung React + Vite + TailwindCSS
+- `backend`: API NestJS + TypeORM
+- `database.sql`: schema va seed data MySQL
 
-### 1.2. Giải pháp (Solution)
-Để giải quyết các hạn chế hiện tại và đáp ứng đúng đặc thù của loại hình dịch vụ xe khách cỡ nhỏ/trung chất lượng cao, dự án đề xuất xây dựng nền tảng quản lý trực tuyến toàn diện ("Smart Fleet & Ticketing Management") bao gồm các trọng tâm sau:
- **Hệ thống Đặt vé & Chăm sóc khách hàng (VinaCoach Core)**: Số hóa toàn bộ bảng giá, thanh toán trực tuyến nhằm minh bạch thông tin dịch vụ. Đặc biệt, hệ thống tối ưu hóa trải nghiệm cho tập khách quen thông qua việc hỗ trợ lưu trữ thông tin.
- 
----
+## Tong quan
 
-## 2. PHÂN TÍCH ĐỐI TƯỢNG NGƯỜI DÙNG (USER PERSONAS)
+VinaCoach huong den mo hinh nha xe co nho va trung chat luong cao, ho tro:
+- Tim chuyen xe va xem gia ve
+- Dang ky, dang nhap, dat ve, thanh toan
+- Quan ly tuyen duong, khung gio, chuyen di
+- Quan ly phuong tien, nhan su
+- Bao cao doanh thu va thong ke luot khach
 
-### 2.1. Khách vãng lai (Guest)
-* **Quyền hạn:** Tìm kiếm chuyến đi, xem giá vé.
-* **Hạn chế:** Không thể thanh toán và chốt vé nếu chưa nhập thông tin định danh.
+## Cong nghe su dung
 
-### 2.2. Hành khách (Customer)
-* **Quyền hạn:** Đặt vé, thanh toán trực tuyến, tra cứu lịch sử đi lại, hủy vé theo chính sách.
-* **Mô tả đối tượng**: Là tập khách hàng có thu nhập trung bình và trung bình khá, mong muốn một dịch vụ di chuyển an toàn và tiện lợi. Họ thường là khách quen của nhà xe, ưa chuộng dòng xe cỡ nhỏ/trung chất lượng cao và đặc biệt có nhu cầu được xe đón và trả tận nhà thay vì phải tự di chuyển ra bến.
+- Frontend: React 19, Vite, TypeScript, TailwindCSS, shadcn/ui
+- Backend: NestJS, TypeORM, JWT, Swagger
+- Database: MySQL
+- Cache / slot locking: Redis
+- Thanh toan: VNPay sandbox
 
-### 2.3. Nhân viên (Staff)
-* **Quản lý vận hành**: 
-  Tạo tuyến đường: Thiết lập các điểm đi, điểm đến và khoảng cách giữa các tỉnh thành.
-o	Lập lịch trình (Trip): Sắp xếp thời gian xe chạy, gán xe và tài xế cụ thể cho từng chuyến.
-•	Hỗ trợ nghiệp vụ: Thực hiện đặt vé tại quầy cho khách.
+## Cau truc thu muc
 
-### 2.4. Quản trị viên (Admin)
-* **Quản trị hệ thống**: Quản lý danh mục loại xe, thông tin phương tiện và hồ sơ nhân sự (Nhân viên/Tài xế).
-* **Phân quyền**: Cấp tài khoản và quản lý quyền truy cập của nhân viên vào hệ thống.
-* **Báo cáo chiến lược**: Theo dõi biểu đồ doanh thu, thống kê lượng khách và đánh giá hiệu suất của các tuyến đường.
+```text
+Do_An/
+|-- backend/
+|-- frontend/
+|-- database.sql
+|-- readme.md
+|-- RUN.md
+```
 
----
+## Yeu cau moi truong
 
-## 3. DANH SÁCH TÍNH NĂNG (FEATURE LIST) & ĐẶC TẢ CHI TIẾT
+Can cai san:
+- Node.js 18+
+- npm 9+
+- MySQL 8+ hoac XAMPP MySQL
+- Redis (khuyen nghi, mac dinh port `6379`)
 
-Các Tính năng (Features)
-2.1. Quản lý Tuyến đường và Lịch trình (Route & Schedule Management)
-- Quản lý Tuyến đường:
-Thêm, sửa, xóa, cập nhật thông tin chi tiết về các tuyến đường (điểm đi, điểm đến, khoảng cách, giá vé cơ bản).
-- Lập Lịch trình:
-Thiết lập các chuyến xe chạy thực tế dựa trên các tuyến đường đã tạo.
-Gán thời gian xuất bến, sắp xếp phương tiện và phân công tài xế cụ thể cho từng chuyến.
-2.2. Đặt vé và Thanh toán trực tuyến (Ticketing & Payment)
-Tìm kiếm và Đặt chỗ:
-- Số hóa cho phép hành khách xem và lựa chọn chuyến.
-- Cho phép hành khách nhập text tự do hoặc chọn thông tin địa điểm đón/trả tận nhà khi tiến hành đặt vé.
-- Xử lý Giao dịch an toàn (Slot Locking / Giữ chỗ):
-Tích hợp cơ chế giữ chỗ tạm thời bằng Redis (đếm ngược 10 phút) khi hành khách tiến hành thanh toán. Hệ thống sẽ tạm trừ đi số lượng vé khách đang đặt vào tổng số chỗ trống của chuyến xe, loại bỏ hoàn toàn tình trạng bán vượt quá sức chứa của xe (overbooking).
-- Thanh toán Điện tử:
-Tích hợp API của VNPay để xử lý giao dịch trực tuyến an toàn.
-2.3. Quản lý Hệ thống và Nhân sự (System & HR Management)
-- Quản lý Phương tiện:
-Tìm kiếm, thêm, xóa và sửa thông tin về danh mục các xe cỡ nhỏ và trung.
-- Quản lý Tài khoản:
-Tạo, xóa, sửa và tìm kiếm tài khoản của nhân viên điều hành.
-2.4. Báo cáo và Thống kê (Reports & Analytics)
-- Báo cáo Doanh thu:
-Thống kê và trực quan hóa dữ liệu doanh thu để ban quản lý đánh giá hiệu quả kinh doanh.
-- Thống kê Lượt khách / Chuyến xe:
-Theo dõi hiệu suất khai thác của từng chuyến xe thông qua dữ liệu lượt khách
+Khuyen nghi moi truong Windows:
+- VSCode
+- XAMPP neu dung MySQL local
 
----
+## Huong dan chay nhanh
 
-## 5. KIẾN TRÚC DỮ LIỆU (DATA MODEL CỐT LÕI)
-1. **Roles**: Lưu danh mục các vai trò trong hệ thống (Admin, Staff, Customer) để quản lý phân quyền truy cập.
-2. **Users**: Lưu thông tin định danh của khách hàng, nhân viên và quản trị viên; liên kết với bảng Roles thông qua RoleID.
-3. **Routes**: Lưu thông tin các tuyến đường cố định bao gồm điểm đi, điểm đến, khoảng cách và đơn giá vé cơ bản.
-4. **Schedules** (Khung giờ): Lưu các khung giờ xuất bến cố định trong ngày cho từng tuyến đường để hỗ trợ nhân viên lập lịch nhanh chóng.
-5. **Buses**: Lưu thông tin chi tiết về phương tiện như biển số xe, loại xe (giường nằm/ghế ngồi) và tổng số ghế.
-6. **Trips**: Lưu các chuyến đi thực tế trong ngày, kết hợp thông tin từ khung giờ, xe và tài xế cụ thể.
-7. **Tickets**: Lưu thông tin vé đã đặt, bao gồm địa điểm đón khách (pick_up_location), địa điểm trả khách (drop_off_location) và trạng thái vé.
-8. **Payments**: Lưu vết các giao dịch thanh toán trực tuyến (VNPAY) bao gồm số tiền, thời gian và trạng thái giao dịch để đối soát doanh thu.
----
+### 1. Clone / mo project
 
-## 6. CÔNG NGHỆ SỬ DỤNG (TECH STACK)
+Neu da co source:
 
-* **Frontend:** Vite, ReactJS.
-* **Backend:** Node.js (NestJS).
-* **Database:** MySQL.
-* **Caching/Locking:** Redis (Xử lý giữ chỗ đồng thời và đếm ngược thời gian thanh toán)
-* **Payment Gateway:** API VNPay.
+```bash
+cd D:\Study\Do_An
+```
 
-## 7. Current Progress (Tiến độ hiện tại)
+Neu vua clone:
 
-### Backend (NestJS) - Hoàn thành
-- Auth Module (JWT + RBAC: Admin/Staff/Customer)
-- Users Module (CRUD nhân sự)
-- Routes Module (CRUD tuyến đường)
-- Schedules Module (CRUD khung giờ)
-- Buses Module (CRUD phương tiện)
-- Trips Module (Lập lịch chuyến + tìm kiếm)
-- Tickets Module (Đặt vé + Redis slot locking 10 phút)
-- Payments Module (Tích hợp VNPay sandbox)
-- Reports Module (Doanh thu + thống kê lượt khách)
+```bash
+git clone https://github.com/quocanh4456/DoAn.git
+cd DoAn
+```
 
-### Frontend (Vite + React + TailwindCSS + shadcn/ui) - Hoàn thành
-- Trang chủ + Tìm chuyến xe (Public)
-- Đăng nhập / Đăng ký
-- Đặt vé với countdown 10 phút + Thanh toán VNPay
-- Lịch sử vé của khách hàng
-- Quản lý tuyến đường, khung giờ, chuyến đi (Staff)
-- Đặt vé tại quầy (Staff)
-- Quản lý phương tiện, nhân sự (Admin)
-- Dashboard báo cáo doanh thu + biểu đồ (Admin)
+### 2. Import database
 
-### Hướng dẫn chạy
+Project da co file `database.sql` chua schema va du lieu mau.
 
-#### Yêu cầu
-- Node.js >= 18
-- MySQL đang chạy (tạo database `vinacoach`)
-- Redis đang chạy (mặc định port 6379)
+Cach de nhat voi phpMyAdmin:
+1. Mo `http://localhost/phpmyadmin`
+2. Chon `Import`
+3. Chon file `database.sql`
+4. Bam `Go`
 
-#### Backend
+Hoac dung command line:
+
+```bash
+mysql -u root -p < database.sql
+```
+
+Database duoc tao voi ten:
+
+```text
+vinacoach
+```
+
+### 3. Cai dependency
+
+Backend:
+
 ```bash
 cd backend
-cp .env.example .env   # hoặc chỉnh sửa .env có sẵn
+npm install
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+```
+
+### 4. Cau hinh backend
+
+File `backend/.env` dang duoc bo qua khoi git, ban can tao file nay tren may local.
+
+Noi dung toi thieu tham khao:
+
+```env
+PORT=3000
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
+DB_DATABASE=vinacoach
+
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_jwt_refresh_secret
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+Neu ban dung XAMPP mac dinh thi `DB_USERNAME=root` va `DB_PASSWORD=` thuong la duoc.
+
+### 5. Chay backend
+
+Mo terminal 1:
+
+```bash
+cd backend
 npm run start:dev
 ```
-API chạy tại: http://localhost:3000
-Swagger docs: http://localhost:3000/api/docs
 
-#### Frontend
+Sau khi chay thanh cong:
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/api/docs`
+
+### 6. Chay frontend
+
+Mo terminal 2:
+
 ```bash
 cd frontend
 npm run dev
 ```
-App chạy tại: http://localhost:5173
 
-## 8. Yêu cầu đặc thù
+Sau khi chay thanh cong:
+- App: `http://localhost:5173`
+
+## Tai khoan test
+
+Mat khau cho tat ca tai khoan mau:
+
+```text
+123456
+```
+
+Tai khoan:
+- Admin: `admin@vinacoach.vn`
+- Staff: `staff@vinacoach.vn`
+- Customer: `customer@vinacoach.vn`
+
+## Script huu ich
+
+### Backend
+
+```bash
+npm run start:dev
+npm run build
+npm run test
+npm run test:e2e
+npm run lint
+```
+
+### Frontend
+
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+```
+
+## Tinh nang hien co
+
+### Public / Customer
+- Trang chu va tim chuyen xe
+- Dang ky / dang nhap
+- Dat ve va giu cho tam thoi
+- Thanh toan VNPay
+- Xem lich su ve
+
+### Staff
+- Quan ly tuyen duong
+- Quan ly khung gio
+- Quan ly chuyen di
+- Dat ve tai quay
+
+### Admin
+- Dashboard bao cao
+- Quan ly phuong tien
+- Quan ly nhan su
+
+## Troubleshooting
+
+### Khong ket noi duoc MySQL
+
+Kiem tra:
+- MySQL da start chua
+- File `backend/.env` co dung `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`
+- Da import `database.sql` chua
+
+### Frontend khong goi duoc backend
+
+Kiem tra:
+- Backend dang chay tai `http://localhost:3000`
+- Frontend dang chay tai `http://localhost:5173`
+
+### Redis chua cai
+
+Ung dung van co the chay mot so chuc nang, nhung de co co che giu cho 10 phut on dinh thi nen bat Redis.
+
+### Swagger khong mo duoc
+
+Kiem tra backend da chay thanh cong chua, sau do vao:
+
+`http://localhost:3000/api/docs`
+
+## Tai lieu bo sung
+
+- `RUN.md`: huong dan chay nhanh tren Windows + VSCode
+- `database.sql`: schema va du lieu mau
+
+## Tai lieu nghiep vu tom tat
+
+### Doi tuong nguoi dung
+- Guest: tim chuyen xe, xem gia
+- Customer: dat ve, thanh toan, xem lich su
+- Staff: quan ly van hanh va dat ve tai quay
+- Admin: quan ly he thong, nhan su, bao cao
+
+### Mo hinh du lieu cot loi
+- `roles`
+- `users`
+- `routes`
+- `schedules`
+- `buses`
+- `trips`
+- `tickets`
+- `payments`
