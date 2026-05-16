@@ -89,7 +89,7 @@ export function BookingPage() {
     if (!ticket) return;
     setPaying(true);
     try {
-      const { data } = await paymentService.createVnpayUrl(ticket.id);
+      const { data } = await paymentService.createPayOSUrl(ticket.id);
       window.location.href = data.paymentUrl;
     } catch {
       toast.error('Không thể tạo liên kết thanh toán');
@@ -261,18 +261,23 @@ export function BookingPage() {
               </span>
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                className="flex-1 h-11 text-base font-semibold bg-green-600 hover:bg-green-700"
+            <div className="flex gap-3 relative z-10">
+              <button
+                type="button"
+                className="flex-1 h-11 text-base font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer relative z-20"
                 onClick={handlePayment}
                 disabled={paying}
               >
-                <CreditCard className="h-4 w-4 mr-1.5" />
-                {paying ? 'Đang chuyển...' : 'Thanh toán VNPay'}
-              </Button>
-              <Button variant="outline" onClick={handleCancel} className="h-11">
+                <CreditCard className="h-4 w-4" />
+                {paying ? 'Đang chuyển...' : 'Thanh toán PayOS'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="h-11 px-4 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer relative z-20"
+              >
                 Hủy vé
-              </Button>
+              </button>
             </div>
 
             <p className="text-xs text-muted-foreground text-center">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ticketService } from '@/services/ticket.service';
+import { paymentService } from '@/services/payment.service';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
 export function MyTicketsPage() {
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
 
   const fetchTickets = async () => {
     try {
@@ -34,12 +36,28 @@ export function MyTicketsPage() {
   }, []);
 
   const handleCancel = async (id: number) => {
+    setSubmittingId(id);
     try {
       await ticketService.cancel(id);
       toast.success('Đã hủy vé thành công');
       fetchTickets();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Không thể hủy vé');
+      const message = err?.response?.data?.message;
+      toast.error(Array.isArray(message) ? message.join(', ') : (message || 'Không thể hủy vé'));
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const handlePayment = async (id: number) => {
+    setSubmittingId(id);
+    try {
+      const { data } = await paymentService.createPayOSUrl(id);
+      window.location.href = data.paymentUrl;
+    } catch (err: any) {
+      const message = err?.response?.data?.message;
+      toast.error(Array.isArray(message) ? message.join(', ') : (message || 'Không thể tạo liên kết thanh toán'));
+      setSubmittingId(null);
     }
   };
 
@@ -110,7 +128,7 @@ export function MyTicketsPage() {
                         {t.dropOffLocation}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 relative z-10">
                       <div className="text-right">
                         <div className="text-lg font-bold text-primary">
                           {formatPrice(Number(t.totalPrice))}
@@ -118,14 +136,24 @@ export function MyTicketsPage() {
                       </div>
                       <Badge variant={st.variant} className={st.className}>{st.label}</Badge>
                       {t.status === 'PENDING' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCancel(t.id)}
-                          className="text-red-500 border-red-200 hover:bg-red-50"
-                        >
-                          Hủy vé
-                        </Button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handlePayment(t.id)}
+                            disabled={submittingId === t.id}
+                            className="relative z-20 px-4 py-1.5 text-sm font-medium rounded-lg bg-[#1a3a8f] text-white hover:bg-[#1a3a8f]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            Thanh toán
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(t.id)}
+                            disabled={submittingId === t.id}
+                            className="relative z-20 px-4 py-1.5 text-sm font-medium rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          >
+                            Hủy vé
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>

@@ -35,6 +35,10 @@ export class Payment {
   @Column({ name: 'paid_at', type: 'datetime', nullable: true })
   paidAt: Date;
 
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

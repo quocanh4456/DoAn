@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Trip, Bus } from '../../entities';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { calculateTripBasePrice } from '../../common/utils/pricing.util';
 
 @Injectable()
 export class TripsService {
@@ -18,7 +19,11 @@ export class TripsService {
       .leftJoinAndSelect('trip.schedule', 'schedule')
       .leftJoinAndSelect('schedule.route', 'route')
       .leftJoinAndSelect('trip.bus', 'bus')
-      .where('trip.status = :status', { status: 'SCHEDULED' });
+      .where('trip.status = :status', { status: 'SCHEDULED' })
+      // Only show upcoming trips for customer search.
+      .andWhere(
+        '(trip.departureDate > CURDATE() OR (trip.departureDate = CURDATE() AND schedule.departureTime >= CURTIME()))',
+      );
 
     if (origin) {
       qb.andWhere('route.origin LIKE :origin', { origin: `%${origin}%` });
@@ -33,7 +38,18 @@ export class TripsService {
     qb.andWhere('trip.availableSeats > 0');
     qb.orderBy('schedule.departureTime', 'ASC');
 
-    return qb.getMany();
+    const trips = await qb.getMany();
+
+    return trips.map((trip) => {
+      if (trip.schedule?.route?.basePrice != null) {
+        const adjustedPrice = calculateTripBasePrice(
+          Number(trip.schedule.route.basePrice),
+          trip.departureDate,
+        );
+        trip.schedule.route.basePrice = adjustedPrice;
+      }
+      return trip;
+    });
   }
 
   async findAll() {

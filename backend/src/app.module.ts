@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RoutesModule } from './modules/routes/routes.module';
@@ -10,10 +11,12 @@ import { TripsModule } from './modules/trips/trips.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,6 +40,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     TicketsModule,
     PaymentsModule,
     ReportsModule,
+    ChatbotModule,
   ],
 })
 export class AppModule {}

@@ -82,10 +82,10 @@ export function ManageUsersPage() {
     }
   };
 
-  const roleColor: Record<string, 'default' | 'secondary' | 'outline'> = {
-    Admin: 'default',
-    Staff: 'secondary',
-    Customer: 'outline',
+  const roleBadgeClass: Record<string, string> = {
+    Admin: 'bg-blue-600 text-white border-transparent hover:bg-blue-700',
+    Staff: 'bg-transparent text-gray-600 border border-gray-300 hover:bg-gray-50',
+    Customer: 'bg-transparent text-gray-600 border border-gray-300 hover:bg-gray-50',
   };
 
   return (
@@ -194,7 +194,9 @@ export function ManageUsersPage() {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.phone}</TableCell>
                 <TableCell>
-                  <Badge variant={roleColor[user.role?.name] || 'outline'}>
+                  <Badge
+                    className={roleBadgeClass[user.role?.name] || 'bg-transparent text-gray-600 border border-gray-300'}
+                  >
                     {user.role?.name}
                   </Badge>
                 </TableCell>

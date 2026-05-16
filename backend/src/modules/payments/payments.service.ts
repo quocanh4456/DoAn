@@ -4,22 +4,30 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
+import { PayOS } from '@payos/node';
 import { Payment, Ticket } from '../../entities';
 import { TicketsService } from '../tickets/tickets.service';
 
 @Injectable()
 export class PaymentsService {
+  private payos: PayOS;
+
   constructor(
     @InjectRepository(Payment) private paymentsRepo: Repository<Payment>,
     @InjectRepository(Ticket) private ticketsRepo: Repository<Ticket>,
     private ticketsService: TicketsService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.payos = new PayOS({
+      clientId: this.configService.get<string>('PAYOS_CLIENT_ID') || '',
+      apiKey: this.configService.get<string>('PAYOS_API_KEY') || '',
+      checksumKey: this.configService.get<string>('PAYOS_CHECKSUM_KEY') || '',
+    });
+  }
 
-  async createVnpayUrl(ticketId: number, ipAddr: string) {
+  async createPayOSUrl(ticketId: number) {
     const ticket = await this.ticketsRepo.findOne({
       where: { id: ticketId },
     });
@@ -32,84 +40,123 @@ export class PaymentsService {
       ticketId: ticket.id,
       amount: ticket.totalPrice,
       status: 'PENDING',
+      paymentMethod: 'PAYOS',
+      description: `tickets:${ticket.id}`,
     });
     const saved = await this.paymentsRepo.save(payment);
 
-    const tmnCode = this.configService.get<string>('VNPAY_TMN_CODE');
-    const secretKey = this.configService.get<string>('VNPAY_HASH_SECRET');
-    const vnpUrl = this.configService.get<string>('VNPAY_URL');
-    const returnUrl = this.configService.get<string>('VNPAY_RETURN_URL');
+    const returnUrl = (
+      this.configService.get<string>('PAYOS_RETURN_URL') || ''
+    ).trim();
+    const cancelUrl = (
+      this.configService.get<string>('PAYOS_CANCEL_URL') || ''
+    ).trim();
 
-    const date = new Date();
-    const createDate = this.formatDate(date);
-    const orderId = this.formatOrderId(date, saved.id);
+    const orderCode = saved.id;
 
-    const vnpParams: Record<string, string> = {
-      vnp_Version: '2.1.0',
-      vnp_Command: 'pay',
-      vnp_TmnCode: tmnCode || '',
-      vnp_Locale: 'vn',
-      vnp_CurrCode: 'VND',
-      vnp_TxnRef: orderId,
-      vnp_OrderInfo: `Thanh toan ve xe #${ticket.id}`,
-      vnp_OrderType: 'billpayment',
-      vnp_Amount: String(Number(ticket.totalPrice) * 100),
-      vnp_ReturnUrl: returnUrl || '',
-      vnp_IpAddr: ipAddr,
-      vnp_CreateDate: createDate,
-    };
+    const paymentLink = await this.payos.paymentRequests.create({
+      orderCode,
+      amount: Math.round(Number(ticket.totalPrice)),
+      description: `Ve xe ${ticket.id}`,
+      returnUrl,
+      cancelUrl,
+    });
 
-    const sortedParams = this.sortObject(vnpParams);
-    const signData = new URLSearchParams(sortedParams).toString();
-    const hmac = crypto.createHmac('sha512', secretKey || '');
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
-    sortedParams['vnp_SecureHash'] = signed;
-
-    const paymentUrl =
-      vnpUrl + '?' + new URLSearchParams(sortedParams).toString();
-
-    saved.transactionId = orderId;
+    saved.transactionId = String(orderCode);
     await this.paymentsRepo.save(saved);
 
-    return { paymentUrl, paymentId: saved.id };
+    return { paymentUrl: paymentLink.checkoutUrl, paymentId: saved.id };
   }
 
-  async handleVnpayReturn(query: Record<string, string>) {
-    const secureHash = query['vnp_SecureHash'];
-    const secretKey = this.configService.get<string>('VNPAY_HASH_SECRET');
+  /**
+   * Create a single PayOS payment link for multiple tickets (e.g. round-trip).
+   * The combined ticketIds are stored in the description field as "tickets:1,2"
+   * so that handlePayOSReturn can confirm all of them at once.
+   */
+  async createPayOSUrlMulti(ticketIds: number[]) {
+    const tickets = await this.ticketsRepo.findBy({ id: In(ticketIds) });
 
-    const params = { ...query };
-    delete params['vnp_SecureHash'];
-    delete params['vnp_SecureHashType'];
+    if (tickets.length !== ticketIds.length) {
+      throw new NotFoundException('Một hoặc nhiều vé không tồn tại');
+    }
+    for (const t of tickets) {
+      if (t.status !== 'PENDING') {
+        throw new BadRequestException(
+          `Vé #${t.id} không ở trạng thái chờ thanh toán`,
+        );
+      }
+    }
 
-    const sortedParams = this.sortObject(params);
-    const signData = new URLSearchParams(sortedParams).toString();
-    const hmac = crypto.createHmac('sha512', secretKey || '');
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+    const totalAmount = tickets.reduce(
+      (sum, t) => sum + Number(t.totalPrice),
+      0,
+    );
 
-    const txnRef = query['vnp_TxnRef'];
-    const responseCode = query['vnp_ResponseCode'];
+    // Use ticketId of the FIRST ticket as the FK column (required by schema)
+    // All ticket IDs are stored in description for later retrieval
+    const payment = this.paymentsRepo.create({
+      ticketId: tickets[0].id,
+      amount: totalAmount,
+      status: 'PENDING',
+      paymentMethod: 'PAYOS',
+      description: `tickets:${ticketIds.join(',')}`,
+    });
+    const saved = await this.paymentsRepo.save(payment);
+
+    const returnUrl = (
+      this.configService.get<string>('PAYOS_RETURN_URL') || ''
+    ).trim();
+    const cancelUrl = (
+      this.configService.get<string>('PAYOS_CANCEL_URL') || ''
+    ).trim();
+
+    const orderCode = saved.id;
+    const paymentLink = await this.payos.paymentRequests.create({
+      orderCode,
+      amount: Math.round(totalAmount),
+      description: `Ve khu hoi ${ticketIds.join('-')}`,
+      returnUrl,
+      cancelUrl,
+    });
+
+    saved.transactionId = String(orderCode);
+    await this.paymentsRepo.save(saved);
+
+    return { paymentUrl: paymentLink.checkoutUrl, paymentId: saved.id };
+  }
+
+  async handlePayOSReturn(query: Record<string, string>) {
+    const { code, orderCode, cancel } = query;
 
     const payment = await this.paymentsRepo.findOne({
-      where: { transactionId: txnRef },
+      where: { transactionId: String(orderCode) },
     });
 
     if (!payment) {
       return { success: false, message: 'Không tìm thấy giao dịch' };
     }
 
-    if (secureHash !== signed) {
+    // Parse all ticketIds from description field (e.g. "tickets:1,2")
+    const ticketIds = this.parseTicketIds(payment);
+
+    // Người dùng bấm hủy
+    if (cancel === 'true') {
       payment.status = 'FAILED';
       await this.paymentsRepo.save(payment);
-      return { success: false, message: 'Chữ ký không hợp lệ' };
+      return { success: false, message: 'Bạn đã hủy thanh toán', isCancelled: true };
     }
 
-    if (responseCode === '00') {
+    // Thanh toán thành công (code = '00')
+    if (code === '00') {
       payment.status = 'SUCCESS';
       payment.paidAt = new Date();
       await this.paymentsRepo.save(payment);
-      await this.ticketsService.confirmPayment(payment.ticketId);
+
+      // Confirm all tickets associated with this payment
+      await Promise.all(
+        ticketIds.map((id) => this.ticketsService.confirmPayment(id)),
+      );
+
       return { success: true, message: 'Thanh toán thành công' };
     }
 
@@ -118,28 +165,20 @@ export class PaymentsService {
     return { success: false, message: 'Thanh toán thất bại' };
   }
 
-  private formatDate(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return (
-      date.getFullYear().toString() +
-      pad(date.getMonth() + 1) +
-      pad(date.getDate()) +
-      pad(date.getHours()) +
-      pad(date.getMinutes()) +
-      pad(date.getSeconds())
-    );
-  }
-
-  private formatOrderId(date: Date, paymentId: number): string {
-    return this.formatDate(date) + '_' + paymentId;
-  }
-
-  private sortObject(obj: Record<string, string>): Record<string, string> {
-    const sorted: Record<string, string> = {};
-    const keys = Object.keys(obj).sort();
-    for (const key of keys) {
-      sorted[key] = obj[key];
+  /** Parse ticketIds from "tickets:1,2" in description field */
+  private parseTicketIds(payment: Payment): number[] {
+    try {
+      if (payment.description && payment.description.startsWith('tickets:')) {
+        return payment.description
+          .replace('tickets:', '')
+          .split(',')
+          .map(Number)
+          .filter((n) => !isNaN(n));
+      }
+    } catch {
+      /* fallback */
     }
-    return sorted;
+    // Legacy payments that don't have description — use ticketId FK
+    return [payment.ticketId];
   }
 }

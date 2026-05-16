@@ -119,7 +119,10 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    }
+  *:focus-visible {
+    @apply outline-ring/50;
     }
   body {
     @apply bg-background text-foreground;
@@ -127,4 +130,13 @@
   html {
     @apply font-sans;
     }
+}
+
+/*
+ * Fix: Tailwind v4 / shadcn outline pseudo-elements block pointer events.
+ * This ensures no ::before/::after overlay can intercept clicks.
+ */
+*::before,
+*::after {
+  pointer-events: none;
 }

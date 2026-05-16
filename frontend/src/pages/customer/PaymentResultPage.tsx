@@ -10,6 +10,7 @@ export function PaymentResultPage() {
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
+    isCancelled?: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function PaymentResultPage() {
     });
 
     api
-      .get('/payments/vnpay-return', { params })
+      .get('/payments/payos-return', { params })
       .then(({ data }) => setResult(data))
       .catch(() =>
         setResult({ success: false, message: 'Không thể xác minh thanh toán' }),
@@ -51,14 +52,16 @@ export function PaymentResultPage() {
             </div>
           )}
           <CardTitle className="text-2xl">
-            {result.success ? 'Thanh toán thành công!' : 'Thanh toán thất bại'}
+            {result.success ? 'Thanh toán thành công!' : (result.isCancelled ? 'Đã hủy thanh toán' : 'Thanh toán thất bại')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground">{result.message}</p>
           <div className="flex gap-3 justify-center">
             <Link to="/customer/tickets">
-              <Button className="px-6">{result.success ? 'Xem vé của tôi' : 'Thử lại'}</Button>
+              <Button className="px-6">
+                {result.success ? 'Xem vé của tôi' : (result.isCancelled ? 'Quay lại' : 'Thử lại')}
+              </Button>
             </Link>
             <Link to="/">
               <Button variant="outline" className="px-6">Về trang chủ</Button>

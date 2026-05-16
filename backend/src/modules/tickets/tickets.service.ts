@@ -5,11 +5,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import Redis from 'ioredis';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Ticket, Trip } from '../../entities';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { ConfigService } from '@nestjs/config';
+import { calculateTripBasePrice } from '../../common/utils/pricing.util';
 
 const LOCK_TTL = 600; // 10 minutes in seconds
 
@@ -70,7 +72,11 @@ export class TicketsService {
       }
     }
 
-    const totalPrice = Number(trip.schedule.route.basePrice) * dto.seatCount;
+    const adjustedBasePrice = calculateTripBasePrice(
+      Number(trip.schedule.route.basePrice),
+      trip.departureDate,
+    );
+    const totalPrice = adjustedBasePrice * dto.seatCount;
 
     const ticket = this.ticketsRepo.create({
       tripId: dto.tripId,
@@ -109,6 +115,9 @@ export class TicketsService {
   }
 
   async findByUser(userId: number) {
+    // Auto-expire old PENDING tickets before returning
+    await this.expireOldPendingTickets();
+
     return this.ticketsRepo.find({
       where: { userId },
       relations: ['trip', 'trip.schedule', 'trip.schedule.route', 'trip.bus'],
@@ -196,6 +205,26 @@ export class TicketsService {
       await this.redis.incrby(redisKey, ticket.seatCount);
     } catch {
       /* non-fatal */
+    }
+  }
+
+  /**
+   * Auto-expire PENDING tickets older than 10 minutes.
+   * Runs every minute via cron and also on-demand when user views their tickets.
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async expireOldPendingTickets() {
+    const cutoff = new Date(Date.now() - LOCK_TTL * 1000);
+    const staleTickets = await this.ticketsRepo.find({
+      where: {
+        status: 'PENDING',
+        createdAt: LessThan(cutoff),
+      },
+      relations: ['trip'],
+    });
+
+    for (const ticket of staleTickets) {
+      await this.expireTicket(ticket.id);
     }
   }
 }

@@ -43,6 +43,7 @@ Mo terminal moi trong VSCode:
 ```bash
 cd backend
 npm install
+copy .env.example .env
 npm run start:dev
 ```
 
@@ -79,7 +80,45 @@ Mat khau cho tat ca tai khoan: `123456`
 - Tai xe KHONG la role login; tai xe duoc nhap dang text (`driver_name`) khi tao chuyen.
 - Neu ban da import SQL thi backend da du data mau.
 
-## 9) Troubleshooting nhanh
+## 9) Cau hinh VNPay sandbox (de lam do an)
+
+1. Trong `backend/`, tao file `.env` tu file mau:
+
+```bash
+copy .env.example .env
+```
+
+2. Mo `backend/.env` va cap nhat 4 bien VNPay:
+   - `VNPAY_TMN_CODE`
+   - `VNPAY_HASH_SECRET`
+   - `VNPAY_URL` (sandbox)
+   - `VNPAY_RETURN_URL` (de `http://localhost:3000/api/payments/vnpay-return`)
+
+3. Khoi dong backend + frontend:
+
+```bash
+# terminal 1
+cd backend
+npm run start:dev
+
+# terminal 2
+cd frontend
+npm run dev
+```
+
+4. Luong test sandbox:
+   - Dang nhap bang role `Customer`
+   - Dat 1 ve (trang thai `PENDING`)
+   - Vao `Ve cua toi` -> bam `Thanh toan`
+   - He thong redirect qua VNPay sandbox
+   - Thanh toan test xong se quay ve trang ket qua va cap nhat trang thai ve
+
+5. Neu can quay video bao ve, nen test 3 case:
+   - Success (`vnp_ResponseCode = 00`)
+   - Fail (khong thanh toan)
+   - Ticket khong hop le / da thanh toan roi
+
+## 10) Troubleshooting nhanh
 
 ### Loi ket noi MySQL
 
