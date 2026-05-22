@@ -40,6 +40,12 @@ export class TripsController {
     return this.tripsService.findAll();
   }
 
+  /** Tính giá vé động (kết hợp ngày lễ + tỷ lệ ghế + last-minute) */
+  @Get(':id/dynamic-price')
+  getDynamicPrice(@Param('id', ParseIntPipe) id: number) {
+    return this.tripsService.getDynamicPrice(id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.tripsService.findOne(id);

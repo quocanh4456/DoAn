@@ -1,201 +1,817 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { reportService } from '@/services/report.service';
+import type { ForecastResult, RouteInsight } from '@/services/report.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line, Area, AreaChart,
+  ReferenceLine,
 } from 'recharts';
-import { BarChart3, TrendingUp, Users, Search } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, Minus, Users, Ticket, Bus, Search, RefreshCw,
+  DollarSign, CheckCircle2, Clock, CalendarDays, ArrowUpRight,
+  ArrowDownRight, BarChart3, BrainCircuit, Sparkles, AlertTriangle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import type { RevenueData, TripStat } from '@/types';
 import dayjs from 'dayjs';
 
+// ── helpers ──────────────────────────────────────────────────────────
+const fmt = (v: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
+const fmtCompact = (v: number) =>
+  new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(v);
+
+type Summary = {
+  totalRevenue: number;
+  todayRevenue: number;
+  totalTickets: number;
+  confirmedTickets: number;
+  pendingTickets: number;
+  totalCustomers: number;
+  upcomingTrips: number;
+};
+
+// ── KPI Card ─────────────────────────────────────────────────────────
+function KpiCard({
+  title, value, sub, icon: Icon, gradient, badge, badgeColor,
+}: {
+  title: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  gradient: string;
+  badge?: string;
+  badgeColor?: string;
+}) {
+  return (
+    <Card className={`border-0 shadow-lg overflow-hidden ${gradient} text-white`}>
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <Icon className="h-5 w-5" />
+          </div>
+          {badge && (
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: badgeColor || 'rgba(255,255,255,0.2)', color: '#fff' }}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">{title}</p>
+        <p className="text-2xl font-bold leading-tight truncate">{value}</p>
+        {sub && <p className="text-white/60 text-xs mt-1">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Status breakdown mini-bar ─────────────────────────────────────────
+function StatusBar({ confirmed, pending, total }: { confirmed: number; pending: number; total: number }) {
+  const cancelled = total - confirmed - pending;
+  const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : '0%';
+  return (
+    <div className="space-y-2">
+      {[
+        { label: 'Đã thanh toán', value: confirmed, color: '#22c55e', bg: '#dcfce7' },
+        { label: 'Chờ thanh toán', value: pending,   color: '#f59e0b', bg: '#fef3c7' },
+        { label: 'Đã hủy / Hết hạn', value: cancelled < 0 ? 0 : cancelled, color: '#ef4444', bg: '#fee2e2' },
+      ].map(({ label, value, color, bg }) => (
+        <div key={label} className="flex items-center gap-3 text-sm">
+          <div className="w-28 shrink-0 text-muted-foreground text-xs">{label}</div>
+          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full" style={{ width: pct(value), background: color }} />
+          </div>
+          <div className="w-8 text-right text-xs font-semibold" style={{ color }}>{value}</div>
+          <div className="w-8 text-xs text-muted-foreground">{pct(value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Route occupancy table with mini bar ──────────────────────────────
+function OccupancyRow({ t }: { t: TripStat }) {
+  const pct = t.totalSeats > 0 ? Math.round((t.passengerCount / t.totalSeats) * 100) : 0;
+  const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const hasBooking = t.ticketCount > 0;
+  return (
+    <TableRow className={`hover:bg-muted/40 transition-colors ${!hasBooking ? 'opacity-50' : ''}`}>
+      <TableCell className="font-medium text-sm">
+        <div>{t.route}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{t.departureDate} · {t.departureTime}</div>
+      </TableCell>
+      <TableCell>
+        {hasBooking ? (
+          <span className="text-sm font-semibold text-foreground">{t.ticketCount} vé</span>
+        ) : (
+          <Badge variant="outline" className="text-xs text-muted-foreground font-normal">Chưa có đặt</Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+          </div>
+          <span className="text-xs font-medium" style={{ color }}>
+            {t.passengerCount}/{t.totalSeats}
+          </span>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────
 export function DashboardPage() {
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
-  const [to, setTo] = useState(dayjs().format('YYYY-MM-DD'));
-  const [revenue, setRevenue] = useState<RevenueData[]>([]);
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [tripStats, setTripStats] = useState<TripStat[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [to, setTo]     = useState(dayjs().format('YYYY-MM-DD'));
 
-  const fetchData = async () => {
+  const [summary, setSummary]       = useState<Summary | null>(null);
+  const [revenue, setRevenue]       = useState<RevenueData[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [tripStats, setTripStats]   = useState<TripStat[]>([]);
+  const [routeRev, setRouteRev]     = useState<any[]>([]);
+  const [loaded, setLoaded]         = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+  const [loadingReport, setLoadingReport]   = useState(false);
+  const [showAllTrips, setShowAllTrips]     = useState(false);
+
+  // AI state
+  const [forecast, setForecast]         = useState<ForecastResult | null>(null);
+  const [routeInsights, setRouteInsights] = useState<RouteInsight[]>([]);
+  const [forecastDays, setForecastDays]  = useState<7 | 14 | 30>(14);
+  const [loadingAI, setLoadingAI]        = useState(false);
+  const [aiLoaded, setAiLoaded]          = useState(false);
+
+  // Load KPI summary on mount
+  useEffect(() => {
+    reportService.getSummary()
+      .then(({ data }) => setSummary(data))
+      .catch(() => toast.error('Không thể tải KPI tổng quan'))
+      .finally(() => setLoadingSummary(false));
+  }, []);
+
+  const fetchReport = useCallback(async () => {
+    setLoadingReport(true);
     try {
-      const [revRes, tripRes] = await Promise.all([
+      const [revRes, tripRes, routeRes] = await Promise.all([
         reportService.getRevenue(from, to),
         reportService.getTripStats(from, to),
+        reportService.getRouteRevenue(from, to),
       ]);
       setRevenue(revRes.data.details);
       setTotalRevenue(revRes.data.totalRevenue);
       setTripStats(tripRes.data);
+      setRouteRev(routeRes.data);
       setLoaded(true);
     } catch {
       toast.error('Không thể tải dữ liệu báo cáo');
+    } finally {
+      setLoadingReport(false);
     }
-  };
+  }, [from, to]);
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  // Also auto-load report for current month on mount
+  useEffect(() => { fetchReport(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load AI forecast on mount
+  const fetchAI = useCallback(async (days: 7 | 14 | 30 = forecastDays) => {
+    setLoadingAI(true);
+    try {
+      const [fcRes, insRes] = await Promise.all([
+        reportService.getForecast(days),
+        reportService.getRouteInsights(),
+      ]);
+      setForecast(fcRes.data);
+      setRouteInsights(insRes.data);
+      setAiLoaded(true);
+    } catch {
+      toast.error('Không thể tải dữ liệu AI phân tích');
+    } finally {
+      setLoadingAI(false);
+    }
+  }, [forecastDays]);
+
+  useEffect(() => { fetchAI(14); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPassengers = tripStats.reduce((s, t) => s + t.passengerCount, 0);
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Báo cáo & Thống kê</h1>
+  // Sắp xếp: chuyến có người đặt lên trước, sau đó theo số vé giảm dần
+  const sortedTripStats = [...tripStats].sort((a, b) => {
+    if (b.ticketCount !== a.ticketCount) return b.ticketCount - a.ticketCount;
+    return b.passengerCount - a.passengerCount;
+  });
+  const TRIP_LIMIT = 5;
+  const visibleTrips = showAllTrips ? sortedTripStats : sortedTripStats.slice(0, TRIP_LIMIT);
 
-      <Card className="mb-6">
+  const PIE_COLORS = ['#1a3a8f', '#22c55e', '#f59e0b', '#ef4444'];
+
+  const pieData = summary ? [
+    { name: 'Đã thanh toán', value: summary.confirmedTickets },
+    { name: 'Chờ TT', value: summary.pendingTickets },
+    { name: 'Hủy/Hết hạn', value: Math.max(0, summary.totalTickets - summary.confirmedTickets - summary.pendingTickets) },
+  ].filter(d => d.value > 0) : [];
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Tổng quan hệ thống VinaCoach · Cập nhật lúc {dayjs().format('HH:mm, DD/MM/YYYY')}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setLoadingSummary(true);
+            reportService.getSummary()
+              .then(({ data }) => setSummary(data))
+              .finally(() => setLoadingSummary(false));
+            fetchReport();
+          }}
+          className="gap-1.5"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loadingSummary ? 'animate-spin' : ''}`} />
+          Làm mới
+        </Button>
+      </div>
+
+      {/* ── KPI Cards (always visible) ── */}
+      {loadingSummary ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="h-28 animate-pulse bg-muted border-0" />
+          ))}
+        </div>
+      ) : summary && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <KpiCard
+              title="Tổng doanh thu"
+              value={fmtCompact(summary.totalRevenue) + ' ₫'}
+              sub={`Hôm nay: ${fmtCompact(summary.todayRevenue)} ₫`}
+              icon={DollarSign}
+              gradient="bg-gradient-to-br from-[#1a3a8f] to-[#2a5bd7]"
+              badge={summary.todayRevenue > 0 ? '↑ Hôm nay' : undefined}
+            />
+            <KpiCard
+              title="Tổng vé xe"
+              value={String(summary.totalTickets)}
+              sub={`${summary.confirmedTickets} đã thanh toán`}
+              icon={Ticket}
+              gradient="bg-gradient-to-br from-green-500 to-green-600"
+              badge={`${summary.pendingTickets} chờ TT`}
+              badgeColor="rgba(0,0,0,0.2)"
+            />
+            <KpiCard
+              title="Khách hàng"
+              value={String(summary.totalCustomers)}
+              sub="Tài khoản đã đăng ký"
+              icon={Users}
+              gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+            />
+            <KpiCard
+              title="Chuyến sắp tới"
+              value={String(summary.upcomingTrips)}
+              sub="Đang lên lịch"
+              icon={Bus}
+              gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+            />
+          </div>
+
+          {/* ── Status breakdown + Pie ── */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Phân loại trạng thái vé
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusBar
+                  confirmed={summary.confirmedTickets}
+                  pending={summary.pendingTickets}
+                  total={summary.totalTickets}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  Tỉ lệ vé theo trạng thái
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pieData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={68}
+                        dataKey="value" paddingAngle={3}>
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => [`${v} vé`, '']} />
+                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Chưa có dữ liệu</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* ── Date range filter ── */}
+      <Card>
         <CardContent className="p-4">
           <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-1">
-              <Label>Từ ngày</Label>
-              <Input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
+              <Label className="text-xs">Từ ngày</Label>
+              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label>Đến ngày</Label>
-              <Input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              />
+              <Label className="text-xs">Đến ngày</Label>
+              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 text-sm" />
             </div>
-            <Button onClick={fetchData}>
-              <Search className="h-4 w-4 mr-1.5" />
-              Xem báo cáo
+            <Button onClick={fetchReport} disabled={loadingReport} size="sm" className="gap-1.5">
+              <Search className="h-3.5 w-3.5" />
+              {loadingReport ? 'Đang tải...' : 'Xem báo cáo'}
             </Button>
+            {/* Quick filters */}
+            {[
+              { label: 'Tháng này', from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') },
+              { label: '7 ngày qua', from: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') },
+              { label: 'Hôm nay', from: dayjs().format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') },
+            ].map(q => (
+              <button key={q.label} type="button"
+                onClick={() => {
+                  setFrom(q.from);
+                  setTo(q.to);
+                  // Load báo cáo ngay với khoảng thời gian mới
+                  setLoadingReport(true);
+                  Promise.all([
+                    reportService.getRevenue(q.from, q.to),
+                    reportService.getTripStats(q.from, q.to),
+                    reportService.getRouteRevenue(q.from, q.to),
+                  ]).then(([revRes, tripRes, routeRes]) => {
+                    setRevenue(revRes.data.details ?? []);
+                    setTotalRevenue(revRes.data.totalRevenue ?? 0);
+                    setTripStats(tripRes.data ?? []);
+                    setRouteRev(routeRes.data ?? []);
+                    setLoaded(true);
+                    setShowAllTrips(false);
+                  }).catch(() => {
+                    toast.error('Không thể tải báo cáo');
+                  }).finally(() => {
+                    setLoadingReport(false);
+                  });
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                {q.label}
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>
 
+      {/* ── Report sections ── */}
       {loaded && (
         <>
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
-            <Card className="border-0 shadow-md bg-gradient-to-br from-primary to-primary/80 text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/80">Tổng doanh thu</p>
-                    <p className="text-2xl font-bold">{formatPrice(totalRevenue)}</p>
-                  </div>
-                </div>
+          {/* Revenue summary row */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Doanh thu kỳ</p>
+                <p className="text-xl font-bold text-primary">{fmt(totalRevenue)}</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-md bg-gradient-to-br from-green-500 to-green-600 text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/80">Số chuyến xe</p>
-                    <p className="text-2xl font-bold">{tripStats.length}</p>
-                  </div>
-                </div>
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Tổng lượt khách</p>
+                <p className="text-xl font-bold text-green-600">{totalPassengers} khách</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-md bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/80">Tổng lượt khách</p>
-                    <p className="text-2xl font-bold">{totalPassengers}</p>
-                  </div>
-                </div>
+            <Card className="border-l-4 border-l-orange-500 col-span-2 md:col-span-1">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Số chuyến trong kỳ</p>
+                <p className="text-xl font-bold text-orange-500">{tripStats.length} chuyến</p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Biểu đồ doanh thu theo ngày</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {revenue.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenue}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="date" />
-                    <YAxis
-                      tickFormatter={(v) =>
-                        new Intl.NumberFormat('vi-VN', {
-                          notation: 'compact',
-                        }).format(v)
-                      }
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatPrice(value)}
-                      labelFormatter={(label) => `Ngày: ${label}`}
-                    />
-                    <Bar dataKey="total" fill="oklch(0.546 0.19 264)" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  Không có dữ liệu doanh thu trong khoảng thời gian này
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Charts row */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Revenue area chart */}
+            <Card className="md:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Doanh thu theo ngày
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {revenue.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={revenue}>
+                      <defs>
+                        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#1a3a8f" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#1a3a8f" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis tickFormatter={fmtCompact} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={55} />
+                      <Tooltip formatter={(v: number) => [fmt(v), 'Doanh thu']} labelFormatter={(l) => `Ngày ${l}`} />
+                      <Area type="monotone" dataKey="total" stroke="#1a3a8f" strokeWidth={2}
+                        fill="url(#revGrad)" dot={{ r: 3, fill: '#1a3a8f' }} activeDot={{ r: 5 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-center text-muted-foreground py-12 text-sm">Không có dữ liệu trong khoảng này</p>
+                )}
+              </CardContent>
+            </Card>
 
+            {/* Route revenue bar chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-orange-500" />
+                  Doanh thu theo tuyến
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {routeRev.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={routeRev} layout="vertical" barCategoryGap="25%">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                      <XAxis type="number" tickFormatter={fmtCompact} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis type="category"
+                        dataKey={(r: any) => `${r.origin?.slice(0,5)}→${r.destination?.slice(0,5)}`}
+                        width={70} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <Tooltip formatter={(v: number) => [fmt(v), 'Doanh thu']} />
+                      <Bar dataKey="total" fill="#f97316" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-center text-muted-foreground py-12 text-sm">Không có dữ liệu</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Trip stats table */}
           <Card>
-            <CardHeader>
-              <CardTitle>Thống kê lượt khách theo chuyến xe</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bus className="h-4 w-4 text-primary" />
+                Thống kê chuyến xe
+                <Badge variant="secondary" className="ml-auto font-normal text-xs">
+                  {sortedTripStats.filter(t => t.ticketCount > 0).length} có đặt / {sortedTripStats.length} chuyến
+                </Badge>
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tuyến</TableHead>
-                    <TableHead>Ngày</TableHead>
-                    <TableHead>Giờ</TableHead>
-                    <TableHead>Loại xe</TableHead>
-                    <TableHead>Số vé</TableHead>
-                    <TableHead>Lượt khách</TableHead>
-                    <TableHead>Sức chứa</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tripStats.map((t) => (
-                    <TableRow key={t.tripId}>
-                      <TableCell className="font-medium">{t.route}</TableCell>
-                      <TableCell>{t.departureDate}</TableCell>
-                      <TableCell>{t.departureTime}</TableCell>
-                      <TableCell>{t.busType}</TableCell>
-                      <TableCell>{t.ticketCount}</TableCell>
-                      <TableCell>{t.passengerCount}</TableCell>
-                      <TableCell>{t.totalSeats}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-0">
+              {sortedTripStats.length > 0 ? (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs font-semibold">Tuyến · Ngày · Giờ</TableHead>
+                        <TableHead className="text-xs font-semibold">Số vé</TableHead>
+                        <TableHead className="text-xs font-semibold">Khách/Ghế</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visibleTrips.map((t) => <OccupancyRow key={t.tripId} t={t} />)}
+                    </TableBody>
+                  </Table>
+                  {sortedTripStats.length > TRIP_LIMIT && (
+                    <div className="flex justify-center py-3 border-t">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTrips((v) => !v)}
+                        className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                      >
+                        {showAllTrips
+                          ? `↑ Thu gọn`
+                          : `↓ Xem thêm ${sortedTripStats.length - TRIP_LIMIT} chuyến`}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-center text-muted-foreground py-10 text-sm">Không có chuyến xe trong khoảng này</p>
+              )}
             </CardContent>
           </Card>
         </>
       )}
+
+      {/* ── AI Phân tích & Dự báo ── */}
+      <div className="mt-2">
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <BrainCircuit className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold">AI Phân tích & Dự báo</h2>
+              <p className="text-xs text-muted-foreground">Powered by Weighted Moving Average + Linear Regression</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Forecast day selector */}
+            <div className="flex gap-1 bg-muted rounded-lg p-1">
+              {([7, 14, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    setForecastDays(d);
+                    fetchAI(d);
+                  }}
+                  className={`text-xs px-3 py-1 rounded-md transition-all font-medium ${
+                    forecastDays === d
+                      ? 'bg-white shadow text-purple-700'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {d} ngày
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchAI(forecastDays)}
+              disabled={loadingAI}
+              className="gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingAI ? 'animate-spin' : ''}`} />
+              Cập nhật
+            </Button>
+          </div>
+        </div>
+
+        {loadingAI && !aiLoaded ? (
+          <div className="grid md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="h-24 animate-pulse bg-gradient-to-br from-purple-50 to-violet-50 border-0" />
+            ))}
+          </div>
+        ) : aiLoaded && forecast ? (
+          <>
+            {/* AI KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              {/* Xu hướng */}
+              <Card className="border-0 bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      {forecast.trend === 'up'
+                        ? <TrendingUp className="h-4 w-4" />
+                        : forecast.trend === 'down'
+                        ? <TrendingDown className="h-4 w-4" />
+                        : <Minus className="h-4 w-4" />}
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20">AI</span>
+                  </div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Xu hướng</p>
+                  <p className="text-xl font-bold">
+                    {forecast.trend === 'up' ? '↑ Tăng trưởng' : forecast.trend === 'down' ? '↓ Suy giảm' : '→ Ổn định'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Tốc độ tăng trưởng */}
+              <Card className="border-0 bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20">30 ngày</span>
+                  </div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Tăng trưởng</p>
+                  <p className="text-xl font-bold">
+                    {forecast.growthRate >= 0 ? '+' : ''}{forecast.growthRate}%
+                  </p>
+                  <p className="text-white/60 text-xs">So với 30 ngày trước</p>
+                </CardContent>
+              </Card>
+
+              {/* Dự báo tổng */}
+              <Card className="border-0 bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <DollarSign className="h-4 w-4" />
+                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20">{forecastDays}d</span>
+                  </div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Dự báo DT</p>
+                  <p className="text-xl font-bold leading-tight">{fmtCompact(forecast.forecastTotal)} ₫</p>
+                  <p className="text-white/60 text-xs">{forecastDays} ngày tới</p>
+                </CardContent>
+              </Card>
+
+              {/* Slope */}
+              <Card className="border-0 bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Tốc độ/ngày</p>
+                  <p className="text-xl font-bold">
+                    {forecast.slope >= 0 ? '+' : ''}{fmtCompact(forecast.slope)} ₫
+                  </p>
+                  <p className="text-white/60 text-xs">Thay đổi trung bình/ngày</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Forecast Chart */}
+            <Card className="mb-4 border border-purple-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4 text-purple-600" />
+                  Doanh thu lịch sử & Dự báo {forecastDays} ngày tới
+                  <Badge variant="outline" className="ml-auto text-xs text-purple-600 border-purple-200 font-normal">
+                    ── Thực tế &nbsp;&nbsp; ╌╌ Dự báo
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const todayStr = dayjs().format('YYYY-MM-DD');
+                  const chartData = [
+                    ...forecast.historical.map((d) => ({
+                      date: d.date.slice(5),   // MM-DD
+                      actual: d.revenue,
+                      predicted: undefined as number | undefined,
+                      isForecast: false,
+                    })),
+                    ...forecast.forecast.map((d) => ({
+                      date: d.date.slice(5),
+                      actual: undefined as number | undefined,
+                      predicted: d.revenue,
+                      isForecast: true,
+                      isHoliday: d.isHoliday,
+                    })),
+                  ];
+                  return (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          interval={Math.floor(chartData.length / 8)}
+                        />
+                        <YAxis
+                          tickFormatter={fmtCompact}
+                          tick={{ fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={55}
+                        />
+                        <Tooltip
+                          formatter={(v: number, name: string) => [fmt(v), name === 'actual' ? 'Thực tế' : 'Dự báo']}
+                          labelFormatter={(l) => `Ngày ${l}`}
+                          contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                        />
+                        <ReferenceLine x={dayjs().format('MM-DD')} stroke="#7c3aed" strokeDasharray="4 4" label={{ value: 'Hôm nay', position: 'top', fontSize: 10, fill: '#7c3aed' }} />
+                        <Area type="monotone" dataKey="actual" stroke="#7c3aed" strokeWidth={2}
+                          fill="url(#actualGrad)" dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                        <Area type="monotone" dataKey="predicted" stroke="#f59e0b" strokeWidth={2}
+                          strokeDasharray="6 3" fill="url(#forecastGrad)"
+                          dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Route Insights Table */}
+            {routeInsights.length > 0 && (
+              <Card className="border border-purple-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    Phân tích Tuyến đường — Khuyến nghị AI
+                    <Badge variant="secondary" className="ml-auto font-normal text-xs">
+                      {routeInsights.length} tuyến · 90 ngày qua
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-purple-50/60">
+                        <TableHead className="text-xs font-semibold">Tuyến</TableHead>
+                        <TableHead className="text-xs font-semibold">Số chuyến</TableHead>
+                        <TableHead className="text-xs font-semibold">Lấp đầy TB</TableHead>
+                        <TableHead className="text-xs font-semibold">Doanh thu/chuyến</TableHead>
+                        <TableHead className="text-xs font-semibold">Cao điểm</TableHead>
+                        <TableHead className="text-xs font-semibold">Khuyến nghị AI</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {routeInsights.map((r) => {
+                        const occColor = r.avgOccupancy >= 80 ? '#22c55e' : r.avgOccupancy >= 50 ? '#f59e0b' : '#ef4444';
+                        return (
+                          <TableRow key={r.routeId} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-medium text-sm">{r.route}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.tripCount}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${r.avgOccupancy}%`, background: occColor }} />
+                                </div>
+                                <span className="text-xs font-medium" style={{ color: occColor }}>{r.avgOccupancy}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm font-semibold text-purple-700">
+                              {fmtCompact(r.revenuePerTrip)} ₫
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs font-normal">{r.peakDay}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <RecommendationBadge color={r.recommendationColor} label={r.recommendationLabel} />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+
+// ── AI Recommendation Badge ───────────────────────────────────────────
+function RecommendationBadge({ color, label }: { color: 'green' | 'orange' | 'red'; label: string }) {
+  const styles = {
+    green: 'bg-green-100 text-green-700 border-green-200',
+    orange: 'bg-orange-100 text-orange-700 border-orange-200',
+    red: 'bg-red-100 text-red-700 border-red-200',
+  };
+  const icons = {
+    green: '🟢',
+    orange: '🟠',
+    red: '🔴',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${styles[color]}`}>
+      {icons[color]} {label}
+    </span>
   );
 }

@@ -1,6 +1,24 @@
 import api from './api';
 import type { Trip } from '@/types';
 
+export interface PriceFactor {
+  label: string;
+  multiplier: number;
+  active: boolean;
+}
+
+export interface DynamicPrice {
+  tripId: number;
+  departureDate: string;
+  route: string;
+  availableSeats: number;
+  totalSeats: number;
+  basePrice: number;
+  finalPrice: number;
+  totalMultiplier: number;
+  factors: PriceFactor[];
+}
+
 export const tripService = {
   search: (origin?: string, destination?: string, date?: string) =>
     api.get<Trip[]>('/trips/search', {
@@ -22,4 +40,8 @@ export const tripService = {
     api.patch<Trip>(`/trips/${id}`, data),
 
   remove: (id: number) => api.delete(`/trips/${id}`),
+
+  /** AI: Lấy giá vé động cho một chuyến xe */
+  getDynamicPrice: (id: number) =>
+    api.get<DynamicPrice>(`/trips/${id}/dynamic-price`),
 };

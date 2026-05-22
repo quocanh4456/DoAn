@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Trip, Bus } from '../../entities';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
-import { calculateTripBasePrice } from '../../common/utils/pricing.util';
+import { calculateTripBasePrice, calculateDynamicPrice } from '../../common/utils/pricing.util';
 
 @Injectable()
 export class TripsService {
@@ -89,5 +89,34 @@ export class TripsService {
     const trip = await this.findOne(id);
     trip.status = 'CANCELLED';
     return this.tripsRepo.save(trip);
+  }
+
+  /** Tính giá động cho một chuyến xe cụ thể */
+  async getDynamicPrice(id: number) {
+    const trip = await this.tripsRepo.findOne({
+      where: { id },
+      relations: ['schedule', 'schedule.route', 'bus'],
+    });
+    if (!trip) throw new NotFoundException('Không tìm thấy chuyến đi');
+
+    const basePrice = Number(trip.schedule?.route?.basePrice ?? 0);
+    const totalSeats = trip.bus?.totalSeats ?? 0;
+    const availableSeats = trip.availableSeats;
+
+    const result = calculateDynamicPrice(
+      basePrice,
+      trip.departureDate,
+      availableSeats,
+      totalSeats,
+    );
+
+    return {
+      tripId: id,
+      departureDate: trip.departureDate,
+      route: `${trip.schedule?.route?.origin} → ${trip.schedule?.route?.destination}`,
+      availableSeats,
+      totalSeats,
+      ...result,
+    };
   }
 }

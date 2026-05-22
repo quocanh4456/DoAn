@@ -15,6 +15,8 @@ VinaCoach huong den mo hinh nha xe co nho va trung chat luong cao, ho tro:
 - Quan ly tuyen duong, khung gio, chuyen di
 - Quan ly phuong tien, nhan su
 - Bao cao doanh thu va thong ke luot khach
+- **[AI] Dieu chinh gia ve tu dong theo nhu cau thi truong (Dynamic Pricing)**
+- **[AI] Phan tich doanh thu va du bao bang thuat toan hoc may (Revenue Forecasting)**
 
 ## Cong nghe su dung
 
@@ -204,6 +206,67 @@ npm run lint
 - Dashboard bao cao
 - Quan ly phuong tien
 - Quan ly nhan su
+- **[AI] Phan tich & Du bao doanh thu** (xem section ben duoi)
+
+## Tinh nang AI
+
+VinaCoach tich hop 2 tinh nang AI tu xay dung, khong su dung API AI tra phi ben ngoai.
+Toan bo logic tinh toan chay tren NestJS backend, dua vao du lieu MySQL hien co.
+
+### 1. Dynamic Pricing — Dieu chinh gia ve tu dong
+
+Gia ve duoc tinh tu dong dua tren 4 yeu to ket hop:
+
+| Yeu to | Dieu kien ap dung | He so |
+|--------|------------------|-------|
+| Ngay le | Tet, 30/4, 1/5, 2/9... | x1.25 |
+| Cuoi tuan | Thu 7, Chu nhat | x1.10 |
+| Ghe gan het | > 80% ghe da dat | x1.12 den x1.20 |
+| Dat gap | <= 1 ngay truoc khi khai hanh | x1.15 |
+| Dat gap (nhe) | <= 3 ngay truoc khi khai hanh | x1.08 |
+
+**Gioi han toi da: x1.5** so voi gia goc. Gia lam tron den 1.000 VND gan nhat.
+
+**API endpoint:**
+```
+GET /api/trips/:id/dynamic-price
+```
+Tra ve: `basePrice`, `finalPrice`, `totalMultiplier`, `factors[]` (danh sach yeu to dang ap dung).
+
+**Hien thi tren giao dien:**
+- Trang dat ve (`/customer/booking/:tripId`): hien thi bang "Phan tich gia" voi tung yeu to
+- Badge "Gia dong x1.xx" va gia goc bi gach chan khi co dieu chinh
+- Khi gia thuong: hien thi badge xanh la "Gia ve thuong"
+
+### 2. Revenue Forecasting — Phan tich & Du bao doanh thu
+
+Su dung thuat toan **Weighted Moving Average (WMA) + Linear Regression** de du bao doanh thu.
+
+**Quy trinh tinh toan:**
+1. Lay du lieu doanh thu 90 ngay gan nhat tu DB
+2. Fill gaps: dien 0 cho nhung ngay khong co giao dich
+3. WMA voi window = 7 ngay (ngay gan nhat co trong so cao hon)
+4. Linear Regression tren chuoi WMA de tinh xu huong (slope)
+5. Forecast = WMA(ngay cuoi) + slope x i (cho i ngay toi)
+6. Ap them seasonality: ngay le / cuoi tuan tang them he so tuong ung
+7. Tinh growth rate: so sanh 30 ngay cuoi vs 30 ngay truoc do
+
+**API endpoints:**
+```
+GET /api/reports/forecast?days=7|14|30
+GET /api/reports/route-insights
+```
+
+**Hien thi tren Admin Dashboard (`/admin/dashboard`):**
+
+- **4 KPI cards gradient:** Xu huong (Tang truong / Suy giam / On dinh), Toc do tang truong %, Du bao tong doanh thu, Toc do thay doi trung binh/ngay
+- **Forecast Chart:** Bieu do ket hop duong thuc te (mau tim) + duong du bao net dut (mau cam), voi duong phan cach "Hom nay"
+- **Selector:** Chon du bao 7 / 14 / 30 ngay
+- **Bang Route Insights:** Phan tich tung tuyen duong trong 90 ngay qua
+  - Ty le lap day trung binh
+  - Doanh thu / chuyen
+  - Ngay cao diem trong tuan
+  - Khuyen nghi AI: `Nen tang tan suat chay` / `Can nhac tang gia` / `Can kich cau / khuyen mai`
 
 ## Troubleshooting
 

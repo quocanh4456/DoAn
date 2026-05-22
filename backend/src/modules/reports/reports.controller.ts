@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -13,6 +13,11 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
+  @Get('summary')
+  getSummary() {
+    return this.reportsService.getSummary();
+  }
+
   @Get('revenue')
   getRevenue(@Query('from') from: string, @Query('to') to: string) {
     return this.reportsService.getRevenue(from, to);
@@ -26,5 +31,19 @@ export class ReportsController {
   @Get('route-revenue')
   getRouteRevenue(@Query('from') from: string, @Query('to') to: string) {
     return this.reportsService.getRouteRevenue(from, to);
+  }
+
+  /** AI: Dự báo doanh thu N ngày tới (WMA + Linear Regression) */
+  @Get('forecast')
+  getForecast(
+    @Query('days', new DefaultValuePipe(14), ParseIntPipe) days: number,
+  ) {
+    return this.reportsService.getForecast(days);
+  }
+
+  /** AI: Phân tích và khuyến nghị theo tuyến đường */
+  @Get('route-insights')
+  getRouteInsights() {
+    return this.reportsService.getRouteInsights();
   }
 }

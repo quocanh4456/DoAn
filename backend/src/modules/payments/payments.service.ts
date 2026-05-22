@@ -136,6 +136,14 @@ export class PaymentsService {
       return { success: false, message: 'Không tìm thấy giao dịch' };
     }
 
+    // ── Idempotency: đã xử lý rồi thì không làm lại ──────────────
+    if (payment.status === 'SUCCESS') {
+      return { success: true, message: 'Thanh toán thành công' };
+    }
+    if (payment.status === 'FAILED') {
+      return { success: false, message: 'Thanh toán thất bại' };
+    }
+
     // Parse all ticketIds from description field (e.g. "tickets:1,2")
     const ticketIds = this.parseTicketIds(payment);
 

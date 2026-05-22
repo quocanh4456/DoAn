@@ -8,10 +8,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import Redis from 'ioredis';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Ticket, Trip } from '../../entities';
+import { Ticket, Trip, User } from '../../entities';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { ConfigService } from '@nestjs/config';
-import { calculateTripBasePrice } from '../../common/utils/pricing.util';
+import { calculateDynamicPrice } from '../../common/utils/pricing.util';
+import { EmailService } from '../email/email.service';
 
 const LOCK_TTL = 600; // 10 minutes in seconds
 
@@ -22,7 +23,9 @@ export class TicketsService {
   constructor(
     @InjectRepository(Ticket) private ticketsRepo: Repository<Ticket>,
     @InjectRepository(Trip) private tripsRepo: Repository<Trip>,
+    @InjectRepository(User) private usersRepo: Repository<User>,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {
     this.redis = new Redis({
       host: this.configService.get('REDIS_HOST', 'localhost'),
@@ -72,11 +75,14 @@ export class TicketsService {
       }
     }
 
-    const adjustedBasePrice = calculateTripBasePrice(
+    const totalSeats = trip.bus?.totalSeats ?? 0;
+    const dynamicPricing = calculateDynamicPrice(
       Number(trip.schedule.route.basePrice),
       trip.departureDate,
+      trip.availableSeats,
+      totalSeats,
     );
-    const totalPrice = adjustedBasePrice * dto.seatCount;
+    const totalPrice = dynamicPricing.finalPrice * dto.seatCount;
 
     const ticket = this.ticketsRepo.create({
       tripId: dto.tripId,
@@ -169,6 +175,7 @@ export class TicketsService {
   async confirmPayment(ticketId: number) {
     const ticket = await this.ticketsRepo.findOne({
       where: { id: ticketId },
+      relations: ['trip', 'trip.schedule', 'trip.schedule.route', 'trip.bus'],
     });
     if (!ticket) throw new NotFoundException('Không tìm thấy vé');
 
@@ -180,6 +187,13 @@ export class TicketsService {
     } catch {
       /* non-fatal */
     }
+
+    // Send confirmation email (fire-and-forget, non-blocking)
+    this.usersRepo.findOne({ where: { id: ticket.userId } }).then((user) => {
+      if (user) {
+        this.emailService.sendTicketConfirmation(ticket, user).catch(() => {});
+      }
+    });
 
     return ticket;
   }
