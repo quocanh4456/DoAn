@@ -31,6 +31,51 @@ export interface RouteInsight {
   recommendationColor: 'green' | 'orange' | 'red';
 }
 
+export interface RfmCustomer {
+  userId: number;
+  name: string;
+  email: string;
+  phone: string;
+  recencyDays: number;
+  frequency: number;
+  monetary: number;
+  rScore: number;
+  fScore: number;
+  mScore: number;
+  totalScore: number;
+  segment: string;
+  segmentColor: 'gold' | 'blue' | 'green' | 'red';
+  segmentIcon: string;
+}
+
+export interface RfmResult {
+  segments: RfmCustomer[];
+  summary: {
+    vip: number;
+    loyal: number;
+    potential: number;
+    needBoost: number;
+  };
+}
+
+export interface LowDemandAlert {
+  tripId: number;
+  route: string;
+  origin: string;
+  destination: string;
+  departureDate: string;
+  departureTime: string;
+  totalSeats: number;
+  bookedSeats: number;
+  availableSeats: number;
+  currentOccupancy: number;
+  expectedOccupancy: number;
+  suggestedDiscount: number;
+  severity: 'high' | 'medium' | 'low';
+  basePrice: number;
+  discountedPrice: number;
+}
+
 export const reportService = {
   getSummary: () =>
     api.get<{
@@ -62,4 +107,12 @@ export const reportService = {
   /** AI: Phân tích và khuyến nghị tuyến đường */
   getRouteInsights: () =>
     api.get<RouteInsight[]>('/reports/route-insights'),
+
+  /** AI: Phân khúc khách hàng RFM */
+  getRfmSegments: () =>
+    api.get<RfmResult>('/reports/rfm-segments'),
+
+  /** AI: Cảnh báo chuyến ít khách */
+  getLowDemandAlerts: () =>
+    api.get<LowDemandAlert[]>('/reports/low-demand-alerts'),
 };

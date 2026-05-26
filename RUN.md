@@ -80,7 +80,7 @@ Mat khau cho tat ca tai khoan: `123456`
 - Tai xe KHONG la role login; tai xe duoc nhap dang text (`driver_name`) khi tao chuyen.
 - Neu ban da import SQL thi backend da du data mau.
 
-## 9) Cau hinh VNPay sandbox (de lam do an)
+## 9) Cau hinh PayOS (de lam do an)
 
 1. Trong `backend/`, tao file `.env` tu file mau:
 
@@ -88,11 +88,10 @@ Mat khau cho tat ca tai khoan: `123456`
 copy .env.example .env
 ```
 
-2. Mo `backend/.env` va cap nhat 4 bien VNPay:
-   - `VNPAY_TMN_CODE`
-   - `VNPAY_HASH_SECRET`
-   - `VNPAY_URL` (sandbox)
-   - `VNPAY_RETURN_URL` (de `http://localhost:3000/api/payments/vnpay-return`)
+2. Mo `backend/.env` va cap nhat 3 bien PayOS:
+   - `PAYOS_CLIENT_ID`
+   - `PAYOS_API_KEY`
+   - `PAYOS_CHECKSUM_KEY`
 
 3. Khoi dong backend + frontend:
 
@@ -110,12 +109,12 @@ npm run dev
    - Dang nhap bang role `Customer`
    - Dat 1 ve (trang thai `PENDING`)
    - Vao `Ve cua toi` -> bam `Thanh toan`
-   - He thong redirect qua VNPay sandbox
+   - He thong redirect qua PayOS
    - Thanh toan test xong se quay ve trang ket qua va cap nhat trang thai ve
 
 5. Neu can quay video bao ve, nen test 3 case:
-   - Success (`vnp_ResponseCode = 00`)
-   - Fail (khong thanh toan)
+   - Success (thanh toan thanh cong)
+   - Fail (huy thanh toan)
    - Ticket khong hop le / da thanh toan roi
 
 ## 10) Troubleshooting nhanh

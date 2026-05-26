@@ -75,20 +75,47 @@ export class ReportsService {
   }
 
   async getTripStats(from: string, to: string) {
-    const trips = await this.tripsRepo
+    // ── Bước 1: Lấy trip IDs có vé CONFIRMED được đặt trong kỳ báo cáo ──
+    // (dùng JOIN thay OR EXISTS cho hiệu năng tốt hơn)
+    const tripIdsWithActivity = await this.ticketsRepo
+      .createQueryBuilder('tk')
+      .select('DISTINCT tk.trip_id', 'tripId')
+      .where("tk.status = 'CONFIRMED'")
+      .andWhere('tk.created_at BETWEEN :fromTs AND :toTs', {
+        fromTs: `${from} 00:00:00`,
+        toTs: `${to} 23:59:59`,
+      })
+      .getRawMany();
+
+    const activityTripIds = tripIdsWithActivity.map((r) => Number(r.tripId));
+
+    // ── Bước 2: Lấy thống kê chuyến xe ──
+    // Điều kiện: ngày khởi hành nằm trong kỳ HOẶC có vé đặt trong kỳ
+    const qb = this.tripsRepo
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.schedule', 's')
       .leftJoinAndSelect('s.route', 'r')
       .leftJoinAndSelect('t.bus', 'b')
-      .leftJoin('t.tickets', 'ticket', 'ticket.status = :ts', {
-        ts: 'CONFIRMED',
-      })
+      .leftJoin(
+        't.tickets',
+        'ticket',
+        "ticket.status = 'CONFIRMED'",
+      )
       .addSelect('COUNT(ticket.id)', 'ticketCount')
-      .addSelect('SUM(ticket.seat_count)', 'passengerCount')
-      .where('t.departure_date BETWEEN :from AND :to', { from, to })
+      .addSelect('COALESCE(SUM(ticket.seatCount), 0)', 'passengerCount')
       .groupBy('t.id')
-      .orderBy('t.departure_date', 'DESC')
-      .getRawAndEntities();
+      .orderBy('t.departure_date', 'DESC');
+
+    if (activityTripIds.length > 0) {
+      qb.where(
+        't.departure_date BETWEEN :from AND :to OR t.id IN (:...ids)',
+        { from, to, ids: activityTripIds },
+      );
+    } else {
+      qb.where('t.departure_date BETWEEN :from AND :to', { from, to });
+    }
+
+    const trips = await qb.getRawAndEntities();
 
     const stats = trips.entities.map((trip, i) => ({
       tripId: trip.id,
@@ -390,5 +417,242 @@ export class ReportsService {
     insights.sort((a, b) => b.avgOccupancy - a.avgOccupancy);
 
     return insights;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // AI FEATURE 3: Phân tích khách hàng RFM (Recency · Frequency · Monetary)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Phân loại từng khách hàng theo 3 chỉ số RFM:
+   * R – Recency: ngày đặt vé cuối cách đây bao lâu
+   * F – Frequency: số lần đặt vé thành công (CONFIRMED)
+   * M – Monetary: tổng số tiền đã thanh toán (SUCCESS)
+   * → Gán nhãn: VIP / Trung thành / Tiềm năng / Cần kích cầu
+   */
+  async getRfmSegments() {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    // Query tổng hợp theo từng user
+    // Fix: GROUP BY phải bao gồm các cột non-aggregate (MySQL ONLY_FULL_GROUP_BY)
+    const raw = await this.ticketsRepo
+      .createQueryBuilder('t')
+      .leftJoin('t.user', 'u')
+      .leftJoin('t.payments', 'p', 'p.status = :ps', { ps: 'SUCCESS' })
+      .select('u.id', 'userId')
+      .addSelect('MIN(u.fullName)', 'fullName')
+      .addSelect('MIN(u.email)', 'email')
+      .addSelect('MIN(u.phone)', 'phone')
+      .addSelect("DATE_FORMAT(MAX(t.created_at), '%Y-%m-%d')", 'lastBookingDate')
+      .addSelect(
+        "COUNT(DISTINCT CASE WHEN t.status = 'CONFIRMED' THEN t.id END)",
+        'frequency',
+      )
+      .addSelect('COALESCE(SUM(p.amount), 0)', 'monetary')
+      .where('u.id IS NOT NULL')
+      .groupBy('u.id')
+      .orderBy('monetary', 'DESC')
+      .getRawMany();
+
+    const todayMs = new Date(todayStr).getTime();
+
+    const segments = raw.map((r) => {
+      const lastDate = String(r.lastBookingDate).slice(0, 10);
+      const recencyDays = Math.floor(
+        (todayMs - new Date(lastDate).getTime()) / 86_400_000,
+      );
+      const frequency = Number(r.frequency || 0);
+      const monetary = Number(r.monetary || 0);
+
+      // Scoring 1–3 cho mỗi chiều
+      const rScore = recencyDays <= 7 ? 3 : recencyDays <= 30 ? 2 : 1;
+      const fScore = frequency >= 5 ? 3 : frequency >= 2 ? 2 : 1;
+      const mScore = monetary >= 2_000_000 ? 3 : monetary >= 500_000 ? 2 : 1;
+      const total = rScore + fScore + mScore;
+
+      // Gán nhãn
+      let segment: string;
+      let segmentColor: 'gold' | 'blue' | 'green' | 'red';
+      let segmentIcon: string;
+      if (total >= 8) {
+        segment = 'VIP';
+        segmentColor = 'gold';
+        segmentIcon = '🏆';
+      } else if (total >= 6) {
+        segment = 'Trung thành';
+        segmentColor = 'blue';
+        segmentIcon = '💙';
+      } else if (total >= 4) {
+        segment = 'Tiềm năng';
+        segmentColor = 'green';
+        segmentIcon = '💛';
+      } else {
+        segment = 'Cần kích cầu';
+        segmentColor = 'red';
+        segmentIcon = '🔴';
+      }
+
+      return {
+        userId: Number(r.userId),
+        name: r.fullName ?? '',
+        email: r.email ?? '',
+        phone: r.phone ?? '',
+        recencyDays,
+        frequency,
+        monetary,
+        rScore,
+        fScore,
+        mScore,
+        totalScore: total,
+        segment,
+        segmentColor,
+        segmentIcon,
+      };
+    });
+
+    // Tổng hợp theo phân khúc cho biểu đồ tròn
+    const summary = {
+      vip: segments.filter((s) => s.segment === 'VIP').length,
+      loyal: segments.filter((s) => s.segment === 'Trung thành').length,
+      potential: segments.filter((s) => s.segment === 'Tiềm năng').length,
+      needBoost: segments.filter((s) => s.segment === 'Cần kích cầu').length,
+    };
+
+    return { segments, summary };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // AI FEATURE 4: Cảnh báo chuyến ít khách & Gợi ý khuyến mãi
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Quét các chuyến sắp khởi hành (2–14 ngày tới):
+   * - So sánh tỷ lệ lấp đầy hiện tại với trung bình lịch sử cùng tuyến (90 ngày)
+   * - Nếu < 60% kỳ vọng → cảnh báo LOW DEMAND
+   * - Đề xuất % giảm giá phù hợp
+   */
+  async getLowDemandAlerts() {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    // Ngày từ ngày mai đến 14 ngày tới
+    const fromFuture = new Date(today);
+    fromFuture.setDate(today.getDate() + 1);
+    const toFuture = new Date(today);
+    toFuture.setDate(today.getDate() + 14);
+    const fromFutureStr = fromFuture.toISOString().slice(0, 10);
+    const toFutureStr = toFuture.toISOString().slice(0, 10);
+
+    // Lấy tỷ lệ lấp đầy lịch sử 90 ngày theo từng tuyến
+    const fromPast = new Date(today);
+    fromPast.setDate(today.getDate() - 89);
+    const fromPastStr = fromPast.toISOString().slice(0, 10);
+
+    const historicalRaw = await this.tripsRepo
+      .createQueryBuilder('t')
+      .leftJoin('t.schedule', 's')
+      .leftJoin('s.route', 'r')
+      .leftJoin('t.bus', 'b')
+      .leftJoin('t.tickets', 'ticket', 'ticket.status = :ts', { ts: 'CONFIRMED' })
+      .select('r.id', 'routeId')
+      .addSelect('COALESCE(SUM(ticket.seatCount), 0)', 'totalPassengers')
+      .addSelect('COALESCE(SUM(b.totalSeats), 0)', 'totalCapacity')
+      .where('t.departure_date BETWEEN :from AND :to', {
+        from: fromPastStr,
+        to: todayStr,
+      })
+      .groupBy('r.id')
+      .getRawMany();
+
+    // Tính avgOccupancy theo tuyến
+    const avgOccMap: Record<number, number> = {};
+    historicalRaw.forEach((r) => {
+      const cap = Number(r.totalCapacity || 0);
+      const pax = Number(r.totalPassengers || 0);
+      avgOccMap[Number(r.routeId)] = cap > 0 ? Math.round((pax / cap) * 100) : 0;
+    });
+
+    // Lấy các chuyến sắp tới với số ghế hiện tại
+    const upcomingTrips = await this.tripsRepo
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.schedule', 's')
+      .leftJoinAndSelect('s.route', 'r')
+      .leftJoinAndSelect('t.bus', 'b')
+      .where('t.departure_date BETWEEN :from AND :to', {
+        from: fromFutureStr,
+        to: toFutureStr,
+      })
+      .orderBy('t.departure_date', 'ASC')
+      .getMany();
+
+    const alerts = upcomingTrips
+      .map((trip) => {
+        const route = trip.schedule?.route;
+        if (!route) return null;
+
+        const totalSeats = trip.bus?.totalSeats ?? 0;
+        const availableSeats = trip.availableSeats ?? totalSeats;
+        const bookedSeats = totalSeats - availableSeats;
+        const currentOccupancy =
+          totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0;
+
+        const expectedOccupancy = avgOccMap[route.id] ?? -1;
+
+        // Chỉ cảnh báo nếu:
+        // (A) Có historical data VÀ đang thấp hơn 60% kỳ vọng
+        // (B) Không có historical data NHƯNG chuyến trong 3 ngày tới VÀ 0 đặt chỗ
+        const daysUntilDeparture = Math.floor(
+          (new Date(trip.departureDate).getTime() - today.getTime()) / 86_400_000,
+        );
+
+        if (expectedOccupancy >= 0) {
+          // Case A: có historical data
+          const threshold = expectedOccupancy * 0.6;
+          if (currentOccupancy >= threshold) return null; // đủ tốt, không cảnh báo
+        } else {
+          // Case B: không có historical data — chỉ alert nếu sắp khởi hành và 0 booking
+          if (daysUntilDeparture > 3 || currentOccupancy > 0) return null;
+        }
+
+        // Tính % đề xuất giảm giá (tối đa 25%)
+        let suggestedDiscount = 0;
+        if (expectedOccupancy > 0) {
+          suggestedDiscount = Math.min(
+            25,
+            Math.round((1 - currentOccupancy / Math.max(expectedOccupancy, 1)) * 20),
+          );
+        } else {
+          // Không có historical data nhưng sắp khởi hành → gợi ý giảm cố định
+          suggestedDiscount = 10;
+        }
+
+        // Mức độ nghiêm trọng
+        const severity: 'high' | 'medium' | 'low' =
+          currentOccupancy < 15 ? 'high' : currentOccupancy < 30 ? 'medium' : 'low';
+
+        return {
+          tripId: trip.id,
+          route: `${route.origin} → ${route.destination}`,
+          origin: route.origin,
+          destination: route.destination,
+          departureDate: trip.departureDate,
+          departureTime: trip.schedule?.departureTime ?? '',
+          totalSeats,
+          bookedSeats,
+          availableSeats,
+          currentOccupancy,
+          expectedOccupancy: Math.max(0, expectedOccupancy), // normalize -1 → 0 trong response
+          suggestedDiscount,
+          severity,
+          basePrice: Number(route.basePrice || 0),
+          discountedPrice: Math.round(
+            Number(route.basePrice || 0) * (1 - suggestedDiscount / 100) / 1000,
+          ) * 1000,
+        };
+      })
+      .filter(Boolean);
+
+    return alerts;
   }
 }

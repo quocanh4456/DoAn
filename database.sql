@@ -112,7 +112,7 @@ CREATE TABLE payments (
     ticket_id INT NOT NULL,
     amount DECIMAL(12, 0) NOT NULL,
     transaction_id VARCHAR(100) NULL,
-    payment_method VARCHAR(20) DEFAULT 'VNPAY',
+    payment_method VARCHAR(20) DEFAULT 'PAYOS',
     status VARCHAR(20) DEFAULT 'PENDING',
     paid_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

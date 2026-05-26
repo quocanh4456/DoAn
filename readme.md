@@ -24,7 +24,7 @@ VinaCoach huong den mo hinh nha xe co nho va trung chat luong cao, ho tro:
 - Backend: NestJS, TypeORM, JWT, Swagger
 - Database: MySQL
 - Cache / slot locking: Redis
-- Thanh toan: VNPay sandbox
+- Thanh toan: PayOS
 
 ## Cau truc thu muc
 
@@ -193,7 +193,7 @@ npm run lint
 - Trang chu va tim chuyen xe
 - Dang ky / dang nhap
 - Dat ve va giu cho tam thoi
-- Thanh toan VNPay
+- Thanh toan PayOS
 - Xem lich su ve
 
 ### Staff

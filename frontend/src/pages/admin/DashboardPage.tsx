@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { reportService } from '@/services/report.service';
-import type { ForecastResult, RouteInsight } from '@/services/report.service';
+import type { ForecastResult, RouteInsight, RfmResult, LowDemandAlert } from '@/services/report.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import {
   TrendingUp, TrendingDown, Minus, Users, Ticket, Bus, Search, RefreshCw,
   DollarSign, CheckCircle2, Clock, CalendarDays, ArrowUpRight,
   ArrowDownRight, BarChart3, BrainCircuit, Sparkles, AlertTriangle,
+  AlertCircle, Crown, Heart, Zap, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RevenueData, TripStat } from '@/types';
@@ -147,13 +148,16 @@ export function DashboardPage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingReport, setLoadingReport]   = useState(false);
   const [showAllTrips, setShowAllTrips]     = useState(false);
+  const [activeTab, setActiveTab]           = useState<'report' | 'ai'>('report');
 
   // AI state
-  const [forecast, setForecast]         = useState<ForecastResult | null>(null);
-  const [routeInsights, setRouteInsights] = useState<RouteInsight[]>([]);
-  const [forecastDays, setForecastDays]  = useState<7 | 14 | 30>(14);
-  const [loadingAI, setLoadingAI]        = useState(false);
-  const [aiLoaded, setAiLoaded]          = useState(false);
+  const [forecast, setForecast]           = useState<ForecastResult | null>(null);
+  const [routeInsights, setRouteInsights]  = useState<RouteInsight[]>([]);
+  const [forecastDays, setForecastDays]   = useState<7 | 14 | 30>(14);
+  const [rfmData, setRfmData]             = useState<RfmResult | null>(null);
+  const [lowDemandAlerts, setLowDemandAlerts] = useState<LowDemandAlert[]>([]);
+  const [loadingAI, setLoadingAI]         = useState(false);
+  const [aiLoaded, setAiLoaded]           = useState(false);
 
   // Load KPI summary on mount
   useEffect(() => {
@@ -190,12 +194,16 @@ export function DashboardPage() {
   const fetchAI = useCallback(async (days: 7 | 14 | 30 = forecastDays) => {
     setLoadingAI(true);
     try {
-      const [fcRes, insRes] = await Promise.all([
+      const [fcRes, insRes, rfmRes, alertsRes] = await Promise.all([
         reportService.getForecast(days),
         reportService.getRouteInsights(),
+        reportService.getRfmSegments(),
+        reportService.getLowDemandAlerts(),
       ]);
       setForecast(fcRes.data);
       setRouteInsights(insRes.data);
+      setRfmData(rfmRes.data);
+      setLowDemandAlerts(alertsRes.data ?? []);
       setAiLoaded(true);
     } catch {
       toast.error('Không thể tải dữ liệu AI phân tích');
@@ -250,6 +258,33 @@ export function DashboardPage() {
           <RefreshCw className={`h-3.5 w-3.5 ${loadingSummary ? 'animate-spin' : ''}`} />
           Làm mới
         </Button>
+      </div>
+
+      {/* ── Tab Navigation ── */}
+      <div className="flex gap-1 bg-muted/60 rounded-xl p-1 w-fit border">
+        {([
+          { key: 'report', label: 'Báo cáo', icon: BarChart3 },
+          { key: 'ai',     label: 'AI Phân tích', icon: BrainCircuit },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === key
+                ? 'bg-white text-foreground shadow-sm border'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            {key === 'ai' && lowDemandAlerts.length > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {lowDemandAlerts.length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* ── KPI Cards (always visible) ── */}
@@ -342,6 +377,9 @@ export function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* ══════════ TAB: BÁO CÁO ══════════ */}
+      {activeTab === 'report' && (<>
 
       {/* ── Date range filter ── */}
       <Card>
@@ -531,8 +569,10 @@ export function DashboardPage() {
           </Card>
         </>
       )}
+      </>)}
 
-      {/* ── AI Phân tích & Dự báo ── */}
+      {activeTab === 'ai' && (
+      <>
       <div className="mt-2">
         {/* Section header */}
         <div className="flex items-center justify-between mb-4">
@@ -792,6 +832,182 @@ export function DashboardPage() {
           </>
         ) : null}
       </div>
+
+        {/* ── Low-Demand Alerts ── */}
+        <Card className={`border-l-4 ${lowDemandAlerts.length > 0 ? 'border-l-red-400' : 'border-l-green-400'}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className={`h-4 w-4 ${lowDemandAlerts.length > 0 ? 'text-red-500' : 'text-green-500'}`} />
+              Cảnh báo chuyến ít khách
+              {lowDemandAlerts.length > 0 ? (
+                <Badge className="ml-auto bg-red-100 text-red-700 border-red-200 font-medium text-xs">
+                  {lowDemandAlerts.length} chuyến cần chú ý
+                </Badge>
+              ) : (
+                <Badge className="ml-auto bg-green-100 text-green-700 border-green-200 font-medium text-xs">
+                  Tất cả tốt ✓
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingAI ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
+              </div>
+            ) : lowDemandAlerts.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-center gap-2">
+                <CheckCircle2 className="h-10 w-10 text-green-400" />
+                <p className="text-sm font-medium text-green-700">Không có chuyến nào cần cảnh báo</p>
+                <p className="text-xs text-muted-foreground">Tất cả chuyến trong 14 ngày tới đều đạt tỷ lệ lấp đầy kỳ vọng</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {lowDemandAlerts.map((alert) => {
+                  const severityConfig = {
+                    high:   { bg: 'bg-red-50 border-red-200',    text: 'text-red-700',    badge: 'bg-red-100 text-red-700',    label: 'Nghiêm trọng' },
+                    medium: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700', label: 'Trung bình' },
+                    low:    { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700',  badge: 'bg-yellow-100 text-yellow-700', label: 'Nhẹ' },
+                  }[alert.severity];
+                  return (
+                    <div key={alert.tripId} className={`flex items-center gap-4 p-3 rounded-xl border ${severityConfig.bg}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-sm font-semibold ${severityConfig.text}`}>{alert.route}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${severityConfig.badge}`}>{severityConfig.label}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>📅 {dayjs(alert.departureDate).format('DD/MM/YYYY')} {alert.departureTime}</span>
+                          <span>🪑 {alert.bookedSeats}/{alert.totalSeats} ghế</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-red-500">{alert.currentOccupancy}%</div>
+                          <div className="text-[10px] text-muted-foreground">Hiện tại</div>
+                        </div>
+                        <div className="text-muted-foreground text-sm">vs</div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">{alert.expectedOccupancy}%</div>
+                          <div className="text-[10px] text-muted-foreground">Kỳ vọng</div>
+                        </div>
+                        {alert.suggestedDiscount > 0 && (
+                          <div className="flex items-center gap-1 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+                            <Tag className="h-3 w-3" />
+                            Giảm {alert.suggestedDiscount}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── RFM Customer Segmentation ── */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4 text-violet-500" />
+              Phân tích khách hàng RFM
+              <span className="text-xs font-normal text-muted-foreground ml-1">(Recency · Frequency · Monetary)</span>
+              {rfmData && (
+                <Badge variant="secondary" className="ml-auto text-xs font-normal">
+                  {rfmData.segments.length} khách hàng
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingAI ? (
+              <div className="h-40 animate-pulse bg-muted rounded-lg" />
+            ) : rfmData ? (
+              <div className="space-y-5">
+                {/* Segment summary cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'VIP', count: rfmData.summary.vip,       icon: Crown, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
+                    { label: 'Trung thành', count: rfmData.summary.loyal,  icon: Heart, color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200' },
+                    { label: 'Tiềm năng', count: rfmData.summary.potential, icon: Sparkles, color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
+                    { label: 'Cần kích cầu', count: rfmData.summary.needBoost, icon: Zap, color: 'text-red-600',    bg: 'bg-red-50 border-red-200' },
+                  ].map(({ label, count, icon: Icon, color, bg }) => (
+                    <div key={label} className={`flex items-center gap-3 p-3 rounded-xl border ${bg}`}>
+                      <Icon className={`h-5 w-5 ${color} shrink-0`} />
+                      <div>
+                        <div className={`text-xl font-bold ${color}`}>{count}</div>
+                        <div className="text-xs text-muted-foreground">{label}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* RFM Table */}
+                <div className="rounded-xl border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs font-semibold">Khách hàng</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Phân khúc</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Gần đây (R)</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Tần suất (F)</TableHead>
+                        <TableHead className="text-xs font-semibold text-right">Chi tiêu (M)</TableHead>
+                        <TableHead className="text-xs font-semibold text-center">Điểm</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rfmData.segments.slice(0, 10).map((c) => {
+                        const segStyle = {
+                          gold:  'bg-yellow-100 text-yellow-800 border-yellow-200',
+                          blue:  'bg-blue-100 text-blue-800 border-blue-200',
+                          green: 'bg-green-100 text-green-800 border-green-200',
+                          red:   'bg-red-100 text-red-800 border-red-200',
+                        }[c.segmentColor];
+                        return (
+                          <TableRow key={c.userId} className="hover:bg-muted/40 transition-colors">
+                            <TableCell>
+                              <div className="font-medium text-sm">{c.name || '—'}</div>
+                              <div className="text-xs text-muted-foreground">{c.email}</div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${segStyle}`}>
+                                {c.segmentIcon} {c.segment}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center text-sm text-muted-foreground">
+                              {c.recencyDays} ngày
+                            </TableCell>
+                            <TableCell className="text-center text-sm font-medium">
+                              {c.frequency} vé
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-semibold text-violet-700">
+                              {fmtCompact(c.monetary)} ₫
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-bold">
+                                {c.totalScore}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  {rfmData.segments.length > 10 && (
+                    <div className="py-2 text-center text-xs text-muted-foreground border-t">
+                      Hiển thị 10/{rfmData.segments.length} khách hàng
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-10 text-sm">Chưa có dữ liệu</p>
+            )}
+          </CardContent>
+        </Card>
+      </>
+      )}
     </div>
   );
 }

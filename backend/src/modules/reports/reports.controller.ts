@@ -46,4 +46,16 @@ export class ReportsController {
   getRouteInsights() {
     return this.reportsService.getRouteInsights();
   }
+
+  /** AI: Phân khúc khách hàng theo RFM (Recency · Frequency · Monetary) */
+  @Get('rfm-segments')
+  getRfmSegments() {
+    return this.reportsService.getRfmSegments();
+  }
+
+  /** AI: Cảnh báo chuyến ít khách & Gợi ý giảm giá */
+  @Get('low-demand-alerts')
+  getLowDemandAlerts() {
+    return this.reportsService.getLowDemandAlerts();
+  }
 }

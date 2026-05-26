@@ -26,7 +26,7 @@ export class Payment {
   @Column({ name: 'transaction_id', nullable: true })
   transactionId: string;
 
-  @Column({ name: 'payment_method', default: 'VNPAY' })
+  @Column({ name: 'payment_method', default: 'PAYOS' })
   paymentMethod: string;
 
   @Column({ default: 'PENDING' })
