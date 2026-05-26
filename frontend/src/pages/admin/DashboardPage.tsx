@@ -114,7 +114,10 @@ function OccupancyRow({ t }: { t: TripStat }) {
       </TableCell>
       <TableCell>
         {hasBooking ? (
-          <span className="text-sm font-semibold text-foreground">{t.ticketCount} vé</span>
+          <div className="space-y-0.5">
+            <span className="text-sm font-semibold text-foreground">{t.passengerCount} ghế</span>
+            <div className="text-xs text-muted-foreground">({t.ticketCount} giao dịch)</div>
+          </div>
         ) : (
           <Badge variant="outline" className="text-xs text-muted-foreground font-normal">Chưa có đặt</Badge>
         )}
@@ -540,8 +543,8 @@ export function DashboardPage() {
                     <TableHeader>
                       <TableRow className="bg-muted/50">
                         <TableHead className="text-xs font-semibold">Tuyến · Ngày · Giờ</TableHead>
-                        <TableHead className="text-xs font-semibold">Số vé</TableHead>
-                        <TableHead className="text-xs font-semibold">Khách/Ghế</TableHead>
+                        <TableHead className="text-xs font-semibold">Số ghế đặt</TableHead>
+                        <TableHead className="text-xs font-semibold">Lấp đầy</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
