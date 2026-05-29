@@ -115,4 +115,12 @@ export const reportService = {
   /** AI: Cảnh báo chuyến ít khách */
   getLowDemandAlerts: () =>
     api.get<LowDemandAlert[]>('/reports/low-demand-alerts'),
+
+  /** Staff: Báo cáo ca làm việc */
+  getShiftReport: () =>
+    api.get<{
+      tickets: any[];
+      totalTickets: number;
+      totalRevenue: number;
+    }>('/reports/shift-report'),
 };

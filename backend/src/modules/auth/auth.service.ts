@@ -2,23 +2,40 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User, Role } from '../../entities';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { EmailService } from '../email/email.service';
+
+/** In-memory token store: token → { userId, expiresAt } */
+interface ResetEntry {
+  userId: number;
+  expiresAt: number;
+}
 
 @Injectable()
 export class AuthService {
+  private readonly resetTokens = new Map<string, ResetEntry>();
+
   constructor(
     @InjectRepository(User) private usersRepo: Repository<User>,
     @InjectRepository(Role) private rolesRepo: Repository<Role>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -85,6 +102,105 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token không hợp lệ');
     }
   }
+
+  // ─── Quên mật khẩu ───────────────────────────────────────────────────────────
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.usersRepo.findOne({ where: { email: dto.email } });
+
+    // Luôn trả về thành công để không lộ email tồn tại hay không
+    if (!user || !user.isActive) {
+      return { message: 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.' };
+    }
+
+    // Tạo token ngẫu nhiên, lưu vào store 15 phút
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 phút
+    this.resetTokens.set(token, { userId: user.id, expiresAt });
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+    await this.emailService.sendPasswordResetEmail(user.email, user.fullName, resetLink);
+
+    return { message: 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.' };
+  }
+
+  // ─── Đặt lại mật khẩu ────────────────────────────────────────────────────────
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const entry = this.resetTokens.get(dto.token);
+
+    if (!entry) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã được sử dụng');
+    }
+    if (Date.now() > entry.expiresAt) {
+      this.resetTokens.delete(dto.token);
+      throw new BadRequestException('Token đã hết hạn, vui lòng yêu cầu lại');
+    }
+
+    const user = await this.usersRepo.findOne({ where: { id: entry.userId } });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    user.password = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersRepo.save(user);
+
+    // Xóa token sau khi dùng (one-time use)
+    this.resetTokens.delete(dto.token);
+
+    return { message: 'Đặt lại mật khẩu thành công' };
+  }
+
+  // ─── Đổi mật khẩu (đã đăng nhập) ────────────────────────────────────────────
+
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId },
+      select: ['id', 'password'],
+    });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    const valid = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!valid) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    }
+
+    if (dto.oldPassword === dto.newPassword) {
+      throw new BadRequestException('Mật khẩu mới phải khác mật khẩu cũ');
+    }
+
+    user.password = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersRepo.save(user);
+
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  // ─── Xem & Sửa thông tin cá nhân ────────────────────────────────────────────
+
+  async getMyProfile(userId: number) {
+    const user = await this.usersRepo.findOne({
+      where: { id: userId },
+      relations: ['role'],
+    });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+    // Không trả về password
+    const { password, ...safe } = user as any;
+    return safe;
+  }
+
+  async updateMyProfile(userId: number, dto: UpdateProfileDto) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    user.fullName = dto.fullName;
+    user.phone    = dto.phone;
+    await this.usersRepo.save(user);
+
+    return { message: 'Cập nhật thông tin thành công', fullName: user.fullName, phone: user.phone };
+  }
+
+  // ─── Helper ──────────────────────────────────────────────────────────────────
+
 
   private generateTokens(user: User) {
     const payload = { sub: user.id, email: user.email };

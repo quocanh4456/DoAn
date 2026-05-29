@@ -19,6 +19,98 @@ export class EmailService {
     });
   }
 
+  async sendPasswordResetEmail(
+    to: string,
+    fullName: string,
+    resetLink: string,
+  ): Promise<void> {
+    const from = this.configService.get<string>('MAIL_FROM');
+
+    const html = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Đặt lại mật khẩu - VinaCoach</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- HEADER -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a3a8f 0%,#2a5bd7 100%);padding:32px 40px;text-align:center;">
+              <div style="display:inline-flex;align-items:center;gap:10px;">
+                <div style="background:#f97316;border-radius:10px;width:36px;height:36px;display:inline-block;text-align:center;line-height:36px;">
+                  <span style="color:white;font-size:18px;">🚌</span>
+                </div>
+                <span style="color:white;font-size:22px;font-weight:800;letter-spacing:-0.5px;">
+                  Vina<span style="color:#fb923c;">Coach</span>
+                </span>
+              </div>
+              <h1 style="color:white;font-size:24px;font-weight:700;margin:20px 0 4px;">Đặt lại mật khẩu</h1>
+              <p style="color:rgba(255,255,255,0.75);font-size:14px;margin:0;">
+                Xin chào <strong style="color:white;">${fullName}</strong>, chúng tôi nhận được yêu cầu đặt lại mật khẩu của bạn.
+              </p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;text-align:center;">
+              <div style="background:#f8faff;border:1px solid #e2e8f0;border-radius:12px;padding:24px 20px;margin-bottom:28px;">
+                <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 20px;">
+                  Nhấn vào nút bên dưới để đặt lại mật khẩu. Link này sẽ hết hạn sau <strong>15 phút</strong>.
+                </p>
+                <a href="${resetLink}"
+                   style="display:inline-block;background:linear-gradient(135deg,#1a3a8f,#2a5bd7);color:white;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;">
+                  🔑 Đặt lại mật khẩu
+                </a>
+              </div>
+
+              <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;text-align:left;">
+                <p style="color:#92400e;font-size:12px;margin:0;line-height:1.6;">
+                  ⚠️ Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này. Tài khoản của bạn vẫn an toàn.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8faff;border-top:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
+              <p style="color:#64748b;font-size:13px;margin:0 0 6px;">
+                Cần hỗ trợ? Liên hệ hotline <strong style="color:#1a3a8f;">1900 0000</strong>
+              </p>
+              <p style="color:#94a3b8;font-size:11px;margin:0;">
+                © 2026 VinaCoach. Email này được gửi tự động, vui lòng không reply.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject: '🔑 VinaCoach — Đặt lại mật khẩu của bạn',
+        html,
+      });
+      this.logger.log(`Email đặt lại mật khẩu đã gửi tới ${to}`);
+    } catch (err) {
+      this.logger.error(`Không thể gửi email đặt lại mật khẩu tới ${to}: ${err}`);
+    }
+  }
+
   async sendTicketConfirmation(ticket: Ticket, user: User): Promise<void> {
     const from = this.configService.get<string>('MAIL_FROM');
     const to = user.email;

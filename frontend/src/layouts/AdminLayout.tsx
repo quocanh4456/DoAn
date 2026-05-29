@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Shield,
   UserCog,
+  ClipboardList,
+  Banknote,
 } from 'lucide-react';
 
 // ── Link groups ───────────────────────────────────────────────────────
@@ -34,7 +36,9 @@ const adminGroups = [
       { to: '/staff/routes',         icon: MapPin,     label: 'Tuyến đường' },
       { to: '/staff/schedules',      icon: Clock,      label: 'Khung giờ' },
       { to: '/staff/trips',          icon: Navigation, label: 'Chuyến đi' },
-      { to: '/staff/counter-booking',icon: Ticket,     label: 'Đặt vé tại quầy' },
+      { to: '/staff/counter-booking', icon: Ticket,     label: 'Đặt vé online' },
+      { to: '/staff/tickets',        icon: ClipboardList, label: 'Quản lý vé' },
+      { to: '/staff/shift-report',   icon: Banknote,   label: 'Doanh thu ca' },
     ],
   },
 ];
@@ -46,7 +50,9 @@ const staffGroups = [
       { to: '/staff/routes',          icon: MapPin,     label: 'Tuyến đường' },
       { to: '/staff/schedules',       icon: Clock,      label: 'Khung giờ' },
       { to: '/staff/trips',           icon: Navigation, label: 'Chuyến đi' },
-      { to: '/staff/counter-booking', icon: Ticket,     label: 'Đặt vé tại quầy' },
+      { to: '/staff/counter-booking', icon: Ticket,     label: 'Đặt vé online' },
+      { to: '/staff/tickets',         icon: ClipboardList, label: 'Quản lý vé' },
+      { to: '/staff/shift-report',    icon: Banknote,   label: 'Doanh thu ca' },
     ],
   },
 ];

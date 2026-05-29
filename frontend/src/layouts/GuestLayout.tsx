@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import {
   Bus, LogOut, User, Ticket, Phone, Search,
-  ChevronDown, Settings, LayoutDashboard, Info, HelpCircle,
+  ChevronDown, Settings, LayoutDashboard, Info, HelpCircle, KeyRound, UserCircle,
 } from 'lucide-react';
 import { ChatWidget } from '@/components/ChatWidget';
 
@@ -159,6 +159,14 @@ export function GuestLayout() {
                             Quản trị hệ thống
                           </Link>
                         )}
+                        <Link
+                          to="/customer/profile"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1a3a8f] transition-colors"
+                        >
+                          <UserCircle className="h-4 w-4" />
+                          Thông tin cá nhân
+                        </Link>
                       </div>
                       <div className="border-t border-gray-100 py-1">
                         <button

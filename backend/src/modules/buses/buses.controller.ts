@@ -25,7 +25,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class BusesController {
   constructor(private busesService: BusesService) {}
 
-  @Roles('Admin')
+  @Roles('Admin', 'Staff')
   @Get()
   findAll(@Query('search') search?: string) {
     return this.busesService.findAll(search);

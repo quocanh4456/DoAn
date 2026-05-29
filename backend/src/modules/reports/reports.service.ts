@@ -51,6 +51,36 @@ export class ReportsService {
     };
   }
 
+  async getStaffShiftReport(staffId: number) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStart = `${todayStr} 00:00:00`;
+    const todayEnd = `${todayStr} 23:59:59`;
+
+    // Lấy các vé do nhân viên này bán trong ngày hôm nay (dựa vào ticket.user_id = staffId nếu mua tại quầy)
+    // Và các vé có payment method = 'CASH' (thu tiền mặt trực tiếp)
+    const tickets = await this.ticketsRepo.createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.trip', 'trip')
+      .leftJoinAndSelect('trip.schedule', 'schedule')
+      .leftJoinAndSelect('schedule.route', 'route')
+      .leftJoinAndSelect('ticket.user', 'user')
+      .innerJoin('ticket.payments', 'payment')
+      .where('payment.paymentMethod = :method', { method: 'CASH' })
+      .andWhere('payment.status = :status', { status: 'SUCCESS' })
+      .andWhere('payment.paidAt BETWEEN :from AND :to', { from: todayStart, to: todayEnd })
+      // Cần chắc chắn rằng staffId thu tiền (với description chứa ID của staff)
+      .andWhere('payment.description LIKE :desc', { desc: `%Nhân viên ID: ${staffId}%` })
+      .orderBy('payment.paidAt', 'DESC')
+      .getMany();
+
+    const totalRevenue = tickets.reduce((sum, ticket) => sum + Number(ticket.totalPrice), 0);
+    
+    return {
+      tickets,
+      totalTickets: tickets.length,
+      totalRevenue,
+    };
+  }
+
   async getRevenue(from: string, to: string) {
     const result = await this.paymentsRepo
       .createQueryBuilder('p')

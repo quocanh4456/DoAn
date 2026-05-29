@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -12,6 +12,12 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Controller('api/reports')
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}
+
+  @Roles('Admin', 'Staff')
+  @Get('shift-report')
+  getShiftReport(@Req() req: any) {
+    return this.reportsService.getStaffShiftReport(req.user.id);
+  }
 
   @Get('summary')
   getSummary() {

@@ -11,7 +11,10 @@ export const ticketService = {
 
   getMyTickets: () => api.get<Ticket[]>('/tickets/my'),
 
-  getAll: () => api.get<Ticket[]>('/tickets'),
+  getAll: (search?: string) => 
+    api.get<Ticket[]>('/tickets', { params: { search } }),
+
+  confirmCash: (id: number) => api.patch<Ticket>(`/tickets/${id}/confirm-cash`),
 
   cancel: (id: number) => api.patch<Ticket>(`/tickets/${id}/cancel`),
 };

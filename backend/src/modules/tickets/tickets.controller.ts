@@ -8,6 +8,7 @@ import {
   UseGuards,
   Req,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TicketsService } from './tickets.service';
@@ -36,8 +37,15 @@ export class TicketsController {
   @UseGuards(RolesGuard)
   @Roles('Admin', 'Staff')
   @Get()
-  findAll() {
-    return this.ticketsService.findAll();
+  findAll(@Query('search') search?: string) {
+    return this.ticketsService.findAll(search);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles('Admin', 'Staff')
+  @Patch(':id/confirm-cash')
+  confirmCash(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.ticketsService.confirmCashPayment(id, req.user.id);
   }
 
   @Patch(':id/cancel')

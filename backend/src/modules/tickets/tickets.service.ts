@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import Redis from 'ioredis';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Ticket, Trip, User } from '../../entities';
+import { Ticket, Trip, User, Payment } from '../../entities';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { ConfigService } from '@nestjs/config';
 import { calculateDynamicPrice } from '../../common/utils/pricing.util';
@@ -24,6 +24,7 @@ export class TicketsService {
     @InjectRepository(Ticket) private ticketsRepo: Repository<Ticket>,
     @InjectRepository(Trip) private tripsRepo: Repository<Trip>,
     @InjectRepository(User) private usersRepo: Repository<User>,
+    @InjectRepository(Payment) private paymentsRepo: Repository<Payment>,
     private configService: ConfigService,
     private emailService: EmailService,
   ) {
@@ -131,11 +132,61 @@ export class TicketsService {
     });
   }
 
-  async findAll() {
-    return this.ticketsRepo.find({
-      relations: ['trip', 'trip.schedule', 'trip.schedule.route', 'user'],
-      order: { createdAt: 'DESC' },
+  async findAll(search?: string) {
+    const qb = this.ticketsRepo.createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.trip', 'trip')
+      .leftJoinAndSelect('trip.schedule', 'schedule')
+      .leftJoinAndSelect('schedule.route', 'route')
+      .leftJoinAndSelect('ticket.user', 'user')
+      .orderBy('ticket.createdAt', 'DESC');
+
+    if (search) {
+      if (!isNaN(Number(search))) {
+        // Search by ticket id or phone
+        qb.where('ticket.id = :id OR user.phone LIKE :phone', { id: Number(search), phone: `%${search}%` });
+      } else {
+        // Search by user name or status
+        qb.where('user.fullName LIKE :name OR ticket.status = :status', { name: `%${search}%`, status: search });
+      }
+    }
+
+    return qb.getMany();
+  }
+
+  async confirmCashPayment(id: number, staffId: number) {
+    const ticket = await this.ticketsRepo.findOne({
+      where: { id },
+      relations: ['trip', 'trip.schedule', 'trip.schedule.route', 'trip.bus', 'user'],
     });
+    if (!ticket) throw new NotFoundException('Không tìm thấy vé');
+    if (ticket.status !== 'PENDING') throw new BadRequestException('Vé không ở trạng thái chờ thanh toán');
+
+    ticket.status = 'CONFIRMED';
+    await this.ticketsRepo.save(ticket);
+
+    // Create cash payment record
+    const payment = this.paymentsRepo.create({
+      ticketId: ticket.id,
+      amount: ticket.totalPrice,
+      paymentMethod: 'CASH',
+      status: 'SUCCESS',
+      paidAt: new Date(),
+      description: `Thu tiền mặt tại quầy (Nhân viên ID: ${staffId})`,
+    });
+    await this.paymentsRepo.save(payment);
+
+    try {
+      await this.redis.del(`lock:ticket:${ticket.id}`);
+    } catch {
+      /* non-fatal */
+    }
+
+    // Send confirmation email
+    if (ticket.user) {
+      this.emailService.sendTicketConfirmation(ticket, ticket.user).catch(() => {});
+    }
+
+    return ticket;
   }
 
   async cancel(id: number, userId: number) {

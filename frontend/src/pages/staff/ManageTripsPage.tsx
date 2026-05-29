@@ -44,6 +44,8 @@ export function ManageTripsPage() {
     departureDate: '',
   });
 
+  const [loading, setLoading] = useState(false);
+
   const fetchTrips = async () => {
     const { data } = await tripService.getAll();
     setTrips(data);
@@ -57,6 +59,7 @@ export function ManageTripsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await tripService.create({
         scheduleId: Number(form.scheduleId),
@@ -69,6 +72,8 @@ export function ManageTripsPage() {
       fetchTrips();
     } catch {
       toast.error('Thao tác thất bại');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,7 +116,7 @@ export function ManageTripsPage() {
                   value={form.scheduleId}
                   onValueChange={(v) => setForm({ ...form, scheduleId: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Chọn khung giờ" />
                   </SelectTrigger>
                   <SelectContent>
@@ -132,7 +137,7 @@ export function ManageTripsPage() {
                   value={form.busId}
                   onValueChange={(v) => setForm({ ...form, busId: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Chọn xe" />
                   </SelectTrigger>
                   <SelectContent>
@@ -166,8 +171,8 @@ export function ManageTripsPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Tạo chuyến
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Đang tạo...' : 'Tạo chuyến'}
               </Button>
             </form>
           </DialogContent>
