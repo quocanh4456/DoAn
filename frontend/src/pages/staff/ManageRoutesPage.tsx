@@ -101,11 +101,9 @@ export function ManageRoutesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quản lý tuyến đường</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Thêm tuyến
-            </Button>
+          <DialogTrigger render={<Button onClick={openCreate} />}>
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm tuyến
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -181,31 +179,39 @@ export function ManageRoutesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {routes.map((route) => (
-              <TableRow key={route.id}>
-                <TableCell>{route.id}</TableCell>
-                <TableCell>{route.origin}</TableCell>
-                <TableCell>{route.destination}</TableCell>
-                <TableCell>{route.distance} km</TableCell>
-                <TableCell>{formatPrice(route.basePrice)}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEdit(route)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(route.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+            {routes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  Không tìm thấy chuyến xe phù hợp với tiêu chí tìm kiếm
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              routes.map((route) => (
+                <TableRow key={route.id}>
+                  <TableCell>{route.id}</TableCell>
+                  <TableCell>{route.origin}</TableCell>
+                  <TableCell>{route.destination}</TableCell>
+                  <TableCell>{route.distance} km</TableCell>
+                  <TableCell>{formatPrice(route.basePrice)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(route)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(route.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
