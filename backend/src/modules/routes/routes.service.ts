@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Route } from '../../entities';
@@ -30,6 +30,9 @@ export class RoutesService {
   }
 
   async create(dto: CreateRouteDto) {
+    if (dto.origin.trim().toLowerCase() === dto.destination.trim().toLowerCase()) {
+      throw new BadRequestException('Điểm khởi hành và điểm đến không được trùng nhau');
+    }
     const route = this.routesRepo.create(dto);
     return this.routesRepo.save(route);
   }
@@ -41,6 +44,10 @@ export class RoutesService {
     if (dto.destination !== undefined) route.destination = dto.destination.trim();
     if (dto.distance !== undefined) route.distance = dto.distance;
     if (dto.basePrice !== undefined) route.basePrice = dto.basePrice;
+
+    if (route.origin.toLowerCase() === route.destination.toLowerCase()) {
+      throw new BadRequestException('Điểm khởi hành và điểm đến không được trùng nhau');
+    }
 
     return this.routesRepo.save(route);
   }

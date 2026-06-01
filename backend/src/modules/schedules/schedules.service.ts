@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Schedule } from '../../entities';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -27,12 +27,44 @@ export class SchedulesService {
   }
 
   async create(dto: CreateScheduleDto) {
+    // Kiểm tra trùng lặp khung giờ trên cùng tuyến đường
+    const existing = await this.schedulesRepo.findOne({
+      where: {
+        routeId: dto.routeId,
+        departureTime: dto.departureTime,
+        isActive: true,
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'Khung giờ này đã tồn tại trên tuyến đường, vui lòng kiểm tra lại',
+      );
+    }
+
     const schedule = this.schedulesRepo.create(dto);
     return this.schedulesRepo.save(schedule);
   }
 
   async update(id: number, dto: UpdateScheduleDto) {
     const schedule = await this.findOne(id);
+
+    // Kiểm tra trùng lặp khung giờ (loại trừ chính nó)
+    const routeId = dto.routeId ?? schedule.routeId;
+    const departureTime = dto.departureTime ?? schedule.departureTime;
+    const existing = await this.schedulesRepo.findOne({
+      where: {
+        id: Not(id),
+        routeId,
+        departureTime,
+        isActive: true,
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'Khung giờ này đã tồn tại trên tuyến đường, vui lòng kiểm tra lại',
+      );
+    }
+
     Object.assign(schedule, dto);
     return this.schedulesRepo.save(schedule);
   }

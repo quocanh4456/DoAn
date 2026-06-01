@@ -67,6 +67,10 @@ export function ManageRoutesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.origin.trim().toLowerCase() === form.destination.trim().toLowerCase()) {
+      toast.error('Điểm khởi hành và điểm đến không được trùng nhau');
+      return;
+    }
     try {
       if (editing) {
         await routeService.update(editing.id, form);
