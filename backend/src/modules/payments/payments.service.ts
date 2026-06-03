@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -17,6 +19,7 @@ export class PaymentsService {
   constructor(
     @InjectRepository(Payment) private paymentsRepo: Repository<Payment>,
     @InjectRepository(Ticket) private ticketsRepo: Repository<Ticket>,
+    @Inject(forwardRef(() => TicketsService))
     private ticketsService: TicketsService,
     private configService: ConfigService,
   ) {
@@ -188,5 +191,24 @@ export class PaymentsService {
     }
     // Legacy payments that don't have description — use ticketId FK
     return [payment.ticketId];
+  }
+
+  /**
+   * Create a PayOS payment URL for a guest ticket.
+   * Validates guest email before creating the link.
+   */
+  async createGuestPaymentUrl(ticketId: number, guestEmail: string) {
+    const ticket = await this.ticketsRepo.findOne({
+      where: { id: ticketId },
+    });
+    if (!ticket) throw new NotFoundException('Không tìm thấy vé');
+    if (!ticket.guestEmail || ticket.guestEmail !== guestEmail) {
+      throw new BadRequestException('Email không khớp với thông tin vé');
+    }
+    if (ticket.status !== 'PENDING') {
+      throw new BadRequestException('Vé không ở trạng thái chờ thanh toán');
+    }
+
+    return this.createPayOSUrl(ticketId);
   }
 }

@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Trip, Bus } from '../../entities';
+import { Trip, Bus, Schedule } from '../../entities';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { calculateTripBasePrice, calculateDynamicPrice } from '../../common/utils/pricing.util';
@@ -11,7 +11,75 @@ export class TripsService {
   constructor(
     @InjectRepository(Trip) private tripsRepo: Repository<Trip>,
     @InjectRepository(Bus) private busesRepo: Repository<Bus>,
+    @InjectRepository(Schedule) private schedulesRepo: Repository<Schedule>,
   ) {}
+
+  /**
+   * Kiểm tra xung đột xe và tài xế.
+   * Cùng ngày + cùng khung giờ (departureTime) = xung đột.
+   * @param excludeTripId - ID chuyến đi cần loại trừ (dùng khi update)
+   */
+  private async checkConflicts(
+    scheduleId: number,
+    busId: number,
+    driverName: string,
+    departureDate: string,
+    excludeTripId?: number,
+  ) {
+    // Lấy thông tin schedule để biết departureTime
+    const schedule = await this.schedulesRepo.findOne({
+      where: { id: scheduleId },
+      relations: ['route'],
+    });
+    if (!schedule) throw new NotFoundException('Không tìm thấy khung giờ');
+
+    const departureTime = schedule.departureTime;
+
+    // --- Kiểm tra xung đột phương tiện ---
+    const busConflictQb = this.tripsRepo
+      .createQueryBuilder('trip')
+      .leftJoinAndSelect('trip.schedule', 'schedule')
+      .leftJoinAndSelect('schedule.route', 'route')
+      .where('trip.busId = :busId', { busId })
+      .andWhere('trip.departureDate = :departureDate', { departureDate })
+      .andWhere('schedule.departureTime = :departureTime', { departureTime })
+      .andWhere('trip.status != :cancelled', { cancelled: 'CANCELLED' });
+
+    if (excludeTripId) {
+      busConflictQb.andWhere('trip.id != :excludeId', { excludeId: excludeTripId });
+    }
+
+    const busConflict = await busConflictQb.getOne();
+    if (busConflict) {
+      const bus = await this.busesRepo.findOne({ where: { id: busId } });
+      const routeName = busConflict.schedule?.route
+        ? `${busConflict.schedule.route.origin} → ${busConflict.schedule.route.destination}`
+        : `tuyến #${busConflict.schedule?.routeId}`;
+      throw new ConflictException(
+        `Xe ${bus?.licensePlate || busId} đang chạy tuyến ${routeName} lúc ${departureTime}. Vui lòng điều động xe khác!`,
+      );
+    }
+
+    // --- Kiểm tra xung đột tài xế ---
+    const driverConflictQb = this.tripsRepo
+      .createQueryBuilder('trip')
+      .leftJoinAndSelect('trip.schedule', 'schedule')
+      .where('trip.driverName = :driverName', { driverName })
+      .andWhere('trip.departureDate = :departureDate', { departureDate })
+      .andWhere('schedule.departureTime = :departureTime', { departureTime })
+      .andWhere('trip.status != :cancelled', { cancelled: 'CANCELLED' });
+
+    if (excludeTripId) {
+      driverConflictQb.andWhere('trip.id != :excludeId', { excludeId: excludeTripId });
+    }
+
+    const driverConflict = await driverConflictQb.getOne();
+    if (driverConflict) {
+      throw new ConflictException(
+        `Tài xế ${driverName} đang được phân công chạy chuyến khác lúc ${departureTime}. Vui lòng chọn tài xế khác!`,
+      );
+    }
+  }
 
   async search(origin?: string, destination?: string, date?: string) {
     const qb = this.tripsRepo
@@ -72,6 +140,9 @@ export class TripsService {
     const bus = await this.busesRepo.findOne({ where: { id: dto.busId } });
     if (!bus) throw new NotFoundException('Không tìm thấy phương tiện');
 
+    // Kiểm tra xung đột xe và tài xế
+    await this.checkConflicts(dto.scheduleId, dto.busId, dto.driverName, dto.departureDate);
+
     const trip = this.tripsRepo.create({
       ...dto,
       availableSeats: bus.totalSeats,
@@ -81,13 +152,23 @@ export class TripsService {
 
   async update(id: number, dto: UpdateTripDto) {
     const trip = await this.findOne(id);
+
+    const scheduleId = dto.scheduleId ?? trip.scheduleId;
+    const busId = dto.busId ?? trip.busId;
+    const driverName = dto.driverName ?? trip.driverName;
+    const departureDate = dto.departureDate ?? trip.departureDate;
+
+    // Kiểm tra xung đột xe và tài xế (loại trừ chính nó)
+    await this.checkConflicts(scheduleId, busId, driverName, departureDate, id);
+
     Object.assign(trip, dto);
     return this.tripsRepo.save(trip);
   }
 
-  async remove(id: number) {
+  async remove(id: number, cancelReason: string) {
     const trip = await this.findOne(id);
     trip.status = 'CANCELLED';
+    trip.cancelReason = cancelReason;
     return this.tripsRepo.save(trip);
   }
 

@@ -43,6 +43,9 @@ export class Trip {
   @Column({ default: 'SCHEDULED' })
   status: string;
 
+  @Column({ name: 'cancel_reason', nullable: true })
+  cancelReason: string;
+
   @OneToMany(() => Ticket, (ticket) => ticket.trip)
   tickets: Ticket[];
 

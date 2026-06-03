@@ -39,7 +39,8 @@ export const tripService = {
   update: (id: number, data: Partial<Trip>) =>
     api.patch<Trip>(`/trips/${id}`, data),
 
-  remove: (id: number) => api.delete(`/trips/${id}`),
+  remove: (id: number, cancelReason: string) =>
+    api.delete(`/trips/${id}`, { data: { cancelReason } }),
 
   /** AI: Lấy giá vé động cho một chuyến xe */
   getDynamicPrice: (id: number) =>

@@ -36,6 +36,7 @@ export interface Bus {
   licensePlate: string;
   busType: string;
   totalSeats: number;
+  status: string;
   isActive: boolean;
 }
 
@@ -47,6 +48,7 @@ export interface Trip {
   departureDate: string;
   availableSeats: number;
   status: string;
+  cancelReason?: string;
   schedule: Schedule;
   bus: Bus;
 }
@@ -64,6 +66,9 @@ export interface Ticket {
   trip?: Trip;
   user?: User;
   expiresIn?: number;
+  guestName?: string;
+  guestEmail?: string;
+  cancelReason?: string;
 }
 
 export interface Payment {

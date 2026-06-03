@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Search, MapPin, Clock, Bus, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Clock, Bus, ChevronDown, User, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip } from '@/types';
 
@@ -160,6 +160,8 @@ export function CounterBookingPage() {
   const [seatCount, setSeatCount] = useState(1);
   const [pickUp, setPickUp] = useState('');
   const [dropOff, setDropOff] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Reset dropdowns when trip changes
@@ -188,12 +190,20 @@ export function CounterBookingPage() {
         seatCount,
         pickUpLocation: pickUp,
         dropOffLocation: dropOff,
+        guestName: guestName || undefined,
+        guestEmail: guestEmail || undefined,
       });
-      toast.success('Đặt vé thành công!');
+      if (guestEmail) {
+        toast.success(`Đặt vé thành công! Email thanh toán đã gửi đến ${guestEmail}`);
+      } else {
+        toast.success('Đặt vé thành công!');
+      }
       setSelectedTrip(null);
       setSeatCount(1);
       setPickUp('');
       setDropOff('');
+      setGuestName('');
+      setGuestEmail('');
       handleSearch({ preventDefault: () => {} } as React.FormEvent);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Không thể đặt vé');
@@ -297,6 +307,42 @@ export function CounterBookingPage() {
                       onChange={(e) => setSeatCount(Number(e.target.value))}
                     />
                   </div>
+
+                  {/* Guest info */}
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '16px', marginBottom: '4px' }}>
+                    <div className="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-1">
+                      <User className="h-3.5 w-3.5" />
+                      THÔNG TIN KHÁCH HÀNG
+                    </div>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="guestName">
+                          <User className="h-3.5 w-3.5 inline mr-1 text-blue-500" />
+                          Tên khách hàng
+                        </Label>
+                        <Input
+                          id="guestName"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                          placeholder="VD: Nguyễn Văn A"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="guestEmail">
+                          <Mail className="h-3.5 w-3.5 inline mr-1 text-blue-500" />
+                          Email khách <span className="text-xs text-muted-foreground font-normal">(gửi link thanh toán)</span>
+                        </Label>
+                        <Input
+                          id="guestEmail"
+                          type="email"
+                          value={guestEmail}
+                          onChange={(e) => setGuestEmail(e.target.value)}
+                          placeholder="VD: khach@email.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="pickUp">
                       <MapPin className="h-3.5 w-3.5 inline mr-1 text-green-500" />

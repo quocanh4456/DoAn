@@ -80,6 +80,7 @@ CREATE TABLE trips (
     departure_date DATE NOT NULL,
     available_seats INT NOT NULL,
     status VARCHAR(20) DEFAULT 'SCHEDULED',
+    cancel_reason VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (schedule_id) REFERENCES schedules(id),

@@ -46,6 +46,15 @@ export class Ticket {
   @Column({ default: 'PENDING' })
   status: string;
 
+  @Column({ name: 'guest_name', type: 'varchar', nullable: true })
+  guestName: string | null;
+
+  @Column({ name: 'guest_email', type: 'varchar', nullable: true })
+  guestEmail: string | null;
+
+  @Column({ name: 'cancel_reason', type: 'text', nullable: true })
+  cancelReason: string | null;
+
   @OneToMany(() => Payment, (payment) => payment.ticket)
   payments: Payment[];
 

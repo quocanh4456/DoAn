@@ -15,10 +15,16 @@ export class BusesService {
     @InjectRepository(Bus) private busesRepo: Repository<Bus>,
   ) {}
 
-  async findAll(search?: string) {
+  async findAll(search?: string, busType?: string, status?: string) {
     const where: any = { isActive: true };
     if (search) {
       where.licensePlate = Like(`%${search}%`);
+    }
+    if (busType) {
+      where.busType = busType;
+    }
+    if (status) {
+      where.status = status;
     }
     return this.busesRepo.find({ where });
   }
@@ -31,7 +37,7 @@ export class BusesService {
 
   async create(dto: CreateBusDto) {
     const exists = await this.busesRepo.findOne({
-      where: { licensePlate: dto.licensePlate },
+      where: { licensePlate: dto.licensePlate, isActive: true },
     });
     if (exists) throw new ConflictException('Biển số xe đã tồn tại');
 
@@ -41,6 +47,16 @@ export class BusesService {
 
   async update(id: number, dto: UpdateBusDto) {
     const bus = await this.findOne(id);
+
+    if (dto.licensePlate && dto.licensePlate !== bus.licensePlate) {
+      const exists = await this.busesRepo.findOne({
+        where: { licensePlate: dto.licensePlate, isActive: true },
+      });
+      if (exists && exists.id !== id) {
+        throw new ConflictException('Biển số xe đã tồn tại');
+      }
+    }
+
     Object.assign(bus, dto);
     return this.busesRepo.save(bus);
   }

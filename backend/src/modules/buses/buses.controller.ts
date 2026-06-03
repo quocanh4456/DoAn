@@ -27,8 +27,12 @@ export class BusesController {
 
   @Roles('Admin', 'Staff')
   @Get()
-  findAll(@Query('search') search?: string) {
-    return this.busesService.findAll(search);
+  findAll(
+    @Query('search') search?: string,
+    @Query('busType') busType?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.busesService.findAll(search, busType, status);
   }
 
   @Roles('Admin')

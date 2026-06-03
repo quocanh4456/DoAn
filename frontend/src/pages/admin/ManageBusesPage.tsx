@@ -3,6 +3,7 @@ import { busService } from '@/services/bus.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -25,29 +26,50 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Bus } from '@/types';
+
+const BUS_STATUS_OPTIONS = [
+  { value: 'AVAILABLE', label: 'Sẵn sàng' },
+  { value: 'IN_TRANSIT', label: 'Đang di chuyển' },
+  { value: 'MAINTENANCE', label: 'Đang bảo dưỡng' },
+  { value: 'OUT_OF_SERVICE', label: 'Ngừng hoạt động' },
+];
+
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
+  AVAILABLE: { label: 'Sẵn sàng', variant: 'default' },
+  IN_TRANSIT: { label: 'Đang di chuyển', variant: 'secondary' },
+  MAINTENANCE: { label: 'Đang bảo dưỡng', variant: 'destructive' },
+  OUT_OF_SERVICE: { label: 'Ngừng hoạt động', variant: 'destructive' },
+};
 
 export function ManageBusesPage() {
   const [buses, setBuses] = useState<Bus[]>([]);
   const [search, setSearch] = useState('');
+  const [filterBusType, setFilterBusType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Bus | null>(null);
   const [form, setForm] = useState({
     licensePlate: '',
     busType: 'Ghế ngồi',
     totalSeats: 16,
+    status: 'AVAILABLE',
   });
 
   const fetchBuses = async () => {
-    const { data } = await busService.getAll(search);
+    const { data } = await busService.getAll(
+      search || undefined,
+      filterBusType || undefined,
+      filterStatus || undefined,
+    );
     setBuses(data);
   };
 
   useEffect(() => {
     fetchBuses();
-  }, []);
+  }, [filterBusType, filterStatus]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +78,7 @@ export function ManageBusesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ licensePlate: '', busType: 'Ghế ngồi', totalSeats: 16 });
+    setForm({ licensePlate: '', busType: 'Ghế ngồi', totalSeats: 16, status: 'AVAILABLE' });
     setOpen(true);
   };
 
@@ -66,6 +88,7 @@ export function ManageBusesPage() {
       licensePlate: bus.licensePlate,
       busType: bus.busType,
       totalSeats: bus.totalSeats,
+      status: bus.status || 'AVAILABLE',
     });
     setOpen(true);
   };
@@ -97,6 +120,14 @@ export function ManageBusesPage() {
       toast.error('Không thể xóa');
     }
   };
+
+  const clearFilters = () => {
+    setSearch('');
+    setFilterBusType('');
+    setFilterStatus('');
+  };
+
+  const hasActiveFilters = search || filterBusType || filterStatus;
 
   return (
     <div>
@@ -139,6 +170,7 @@ export function ManageBusesPage() {
                   <SelectContent>
                     <SelectItem value="Ghế ngồi">Ghế ngồi</SelectItem>
                     <SelectItem value="Giường nằm">Giường nằm</SelectItem>
+                    <SelectItem value="Limousine">Limousine</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -154,6 +186,24 @@ export function ManageBusesPage() {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Trạng thái</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => setForm({ ...form, status: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUS_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button type="submit" className="w-full">
                 {editing ? 'Cập nhật' : 'Thêm mới'}
               </Button>
@@ -162,17 +212,57 @@ export function ManageBusesPage() {
         </Dialog>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-        <Input
-          placeholder="Tìm theo biển số..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-        <Button type="submit" variant="outline" size="icon">
-          <Search className="h-4 w-4" />
-        </Button>
-      </form>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <Input
+            placeholder="Tìm theo biển số..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-[220px]"
+          />
+          <Button type="submit" variant="outline" size="icon">
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
+
+        <Select
+          value={filterBusType}
+          onValueChange={setFilterBusType}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Tất cả loại xe" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Ghế ngồi">Ghế ngồi</SelectItem>
+            <SelectItem value="Giường nằm">Giường nằm</SelectItem>
+            <SelectItem value="Limousine">Limousine</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filterStatus}
+          onValueChange={setFilterStatus}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Tất cả trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            {BUS_STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" />
+            Xóa bộ lọc
+          </Button>
+        )}
+      </div>
 
       <div className="border rounded-lg">
         <Table>
@@ -182,6 +272,7 @@ export function ManageBusesPage() {
               <TableHead>Biển số</TableHead>
               <TableHead>Loại xe</TableHead>
               <TableHead>Số ghế</TableHead>
+              <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
@@ -192,6 +283,11 @@ export function ManageBusesPage() {
                 <TableCell className="font-medium">{bus.licensePlate}</TableCell>
                 <TableCell>{bus.busType}</TableCell>
                 <TableCell>{bus.totalSeats}</TableCell>
+                <TableCell>
+                  <Badge variant={statusConfig[bus.status]?.variant || 'secondary'}>
+                    {statusConfig[bus.status]?.label || bus.status}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"

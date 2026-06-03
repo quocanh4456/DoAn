@@ -74,7 +74,10 @@ export class TripsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Admin', 'Staff')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.tripsService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('cancelReason') cancelReason: string,
+  ) {
+    return this.tripsService.remove(id, cancelReason);
   }
 }

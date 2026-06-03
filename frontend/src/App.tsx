@@ -14,6 +14,7 @@ import { RegisterPage } from '@/pages/public/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/public/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/public/ResetPasswordPage';
 import { ChangePasswordPage } from '@/pages/customer/ChangePasswordPage';
+import { GuestPaymentPage } from '@/pages/public/GuestPaymentPage';
 
 import { BookingPage } from '@/pages/customer/BookingPage';
 import { MyTicketsPage } from '@/pages/customer/MyTicketsPage';
@@ -53,6 +54,9 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
+
+          {/* Guest payment (standalone, no layout wrapper) */}
+          <Route path="/guest-payment/:ticketId" element={<GuestPaymentPage />} />
 
           {/* Customer routes */}
           <Route element={<GuestLayout />}>

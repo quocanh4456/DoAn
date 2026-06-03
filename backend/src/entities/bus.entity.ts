@@ -22,6 +22,13 @@ export class Bus {
   @Column({ name: 'total_seats' })
   totalSeats: number;
 
+  @Column({
+    type: 'enum',
+    enum: ['AVAILABLE', 'IN_TRANSIT', 'MAINTENANCE', 'OUT_OF_SERVICE'],
+    default: 'AVAILABLE',
+  })
+  status: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

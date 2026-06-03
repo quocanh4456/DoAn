@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
@@ -13,8 +15,10 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { ConfigService } from '@nestjs/config';
 import { calculateDynamicPrice } from '../../common/utils/pricing.util';
 import { EmailService } from '../email/email.service';
+import { PaymentsService } from '../payments/payments.service';
 
 const LOCK_TTL = 600; // 10 minutes in seconds
+const GUEST_LOCK_TTL = 1800; // 30 minutes for guest bookings
 
 @Injectable()
 export class TicketsService {
@@ -27,6 +31,8 @@ export class TicketsService {
     @InjectRepository(Payment) private paymentsRepo: Repository<Payment>,
     private configService: ConfigService,
     private emailService: EmailService,
+    @Inject(forwardRef(() => PaymentsService))
+    private paymentsService: PaymentsService,
   ) {
     this.redis = new Redis({
       host: this.configService.get('REDIS_HOST', 'localhost'),
@@ -85,6 +91,9 @@ export class TicketsService {
     );
     const totalPrice = dynamicPricing.finalPrice * dto.seatCount;
 
+    const isGuestBooking = !!dto.guestEmail;
+    const lockTtl = isGuestBooking ? GUEST_LOCK_TTL : LOCK_TTL;
+
     const ticket = this.ticketsRepo.create({
       tripId: dto.tripId,
       userId,
@@ -93,6 +102,8 @@ export class TicketsService {
       dropOffLocation: dto.dropOffLocation,
       totalPrice,
       status: 'PENDING',
+      guestName: dto.guestName || null,
+      guestEmail: dto.guestEmail || null,
     });
     const saved = await this.ticketsRepo.save(ticket);
 
@@ -101,7 +112,7 @@ export class TicketsService {
         `lock:ticket:${saved.id}`,
         'locked',
         'EX',
-        LOCK_TTL,
+        lockTtl,
       );
     } catch {
       /* non-fatal if Redis is down */
@@ -114,9 +125,14 @@ export class TicketsService {
       dto.seatCount,
     );
 
+    // If guest booking with email → send email with payment link
+    if (isGuestBooking) {
+      this.sendGuestPaymentEmail(saved, trip).catch(() => {});
+    }
+
     return {
       ...saved,
-      expiresIn: LOCK_TTL,
+      expiresIn: lockTtl,
       totalPrice,
     };
   }
@@ -189,13 +205,15 @@ export class TicketsService {
     return ticket;
   }
 
-  async cancel(id: number, userId: number) {
+  async cancel(id: number, user: any, reason?: string) {
     const ticket = await this.ticketsRepo.findOne({
       where: { id },
       relations: ['trip'],
     });
     if (!ticket) throw new NotFoundException('Không tìm thấy vé');
-    if (ticket.userId !== userId) {
+    
+    const isAdminOrStaff = user.role?.name === 'Admin' || user.role?.name === 'Staff';
+    if (ticket.userId !== user.id && !isAdminOrStaff) {
       throw new BadRequestException('Bạn không có quyền hủy vé này');
     }
     if (ticket.status !== 'PENDING') {
@@ -203,6 +221,9 @@ export class TicketsService {
     }
 
     ticket.status = 'CANCELLED';
+    if (reason) {
+      ticket.cancelReason = reason;
+    }
     await this.ticketsRepo.save(ticket);
 
     // Restore seats
@@ -290,6 +311,45 @@ export class TicketsService {
 
     for (const ticket of staleTickets) {
       await this.expireTicket(ticket.id);
+    }
+  }
+
+  /**
+   * Get ticket info for guest payment page.
+   * Validates guest email to prevent unauthorized access.
+   */
+  async getGuestTicket(ticketId: number, email: string) {
+    const ticket = await this.ticketsRepo.findOne({
+      where: { id: ticketId },
+      relations: ['trip', 'trip.schedule', 'trip.schedule.route', 'trip.bus'],
+    });
+    if (!ticket) throw new NotFoundException('Không tìm thấy vé');
+    if (!ticket.guestEmail || ticket.guestEmail !== email) {
+      throw new BadRequestException('Email không khớp với thông tin vé');
+    }
+    return ticket;
+  }
+
+  /**
+   * Create PayOS link and send email to guest.
+   * Fire-and-forget, non-blocking.
+   */
+  private async sendGuestPaymentEmail(ticket: Ticket, trip: Trip) {
+    try {
+      // Build guest payment page URL
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+      const paymentPageUrl = `${frontendUrl}/guest-payment/${ticket.id}?email=${encodeURIComponent(ticket.guestEmail!)}`;
+
+      await this.emailService.sendGuestBookingEmail(
+        ticket,
+        trip,
+        ticket.guestName || 'Khách hàng',
+        ticket.guestEmail!,
+        paymentPageUrl,
+      );
+    } catch (err) {
+      // Non-fatal: log but don't throw
+      console.error('Failed to send guest payment email:', err);
     }
   }
 }

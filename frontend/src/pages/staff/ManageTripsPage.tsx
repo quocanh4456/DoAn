@@ -27,8 +27,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip, Schedule, Bus } from '@/types';
 
@@ -46,10 +48,26 @@ export function ManageTripsPage() {
 
   const [loading, setLoading] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // State cho dialog hủy chuyến
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelTripId, setCancelTripId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+
   const fetchTrips = async () => {
     const { data } = await tripService.getAll();
     setTrips(data);
   };
+
+  // Pagination logic
+  const totalPages = Math.max(1, Math.ceil(trips.length / itemsPerPage));
+  const paginatedTrips = trips.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
     fetchTrips();
@@ -70,21 +88,36 @@ export function ManageTripsPage() {
       toast.success('Tạo chuyến đi thành công');
       setOpen(false);
       fetchTrips();
-    } catch {
-      toast.error('Thao tác thất bại');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Thao tác thất bại';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn hủy chuyến đi này?')) return;
+  const openCancelDialog = (id: number) => {
+    setCancelTripId(id);
+    setCancelReason('');
+    setCancelOpen(true);
+  };
+
+  const handleCancelSubmit = async () => {
+    if (!cancelTripId) return;
+    if (!cancelReason.trim()) {
+      toast.error('Vui lòng nhập lý do hủy chuyến');
+      return;
+    }
     try {
-      await tripService.remove(id);
+      await tripService.remove(cancelTripId, cancelReason.trim());
       toast.success('Đã hủy chuyến');
+      setCancelOpen(false);
+      setCancelTripId(null);
+      setCancelReason('');
       fetchTrips();
-    } catch {
-      toast.error('Không thể hủy');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể hủy';
+      toast.error(msg);
     }
   };
 
@@ -195,7 +228,7 @@ export function ManageTripsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {trips.map((trip) => (
+            {paginatedTrips.map((trip) => (
               <TableRow key={trip.id}>
                 <TableCell>{trip.id}</TableCell>
                 <TableCell>
@@ -211,15 +244,22 @@ export function ManageTripsPage() {
                   {trip.availableSeats}/{trip.bus?.totalSeats}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={statusColor[trip.status] || 'secondary'}>
-                    {trip.status}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant={statusColor[trip.status] || 'secondary'}>
+                      {trip.status}
+                    </Badge>
+                    {trip.status === 'CANCELLED' && trip.cancelReason && (
+                      <span className="text-xs text-muted-foreground italic max-w-[200px] truncate" title={trip.cancelReason}>
+                        Lý do: {trip.cancelReason}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(trip.id)}
+                    onClick={() => openCancelDialog(trip.id)}
                     disabled={trip.status === 'CANCELLED'}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -230,6 +270,98 @@ export function ManageTripsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination controls */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Hiển thị</span>
+          <Select
+            value={String(itemsPerPage)}
+            onValueChange={(v) => {
+              setItemsPerPage(Number(v));
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[70px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>/ {trips.length} chuyến</span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-foreground mr-2">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Dialog hủy chuyến */}
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hủy chuyến đi</DialogTitle>
+            <DialogDescription>
+              Vui lòng nhập lý do hủy chuyến để tiếp tục.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Lý do hủy chuyến <span className="text-destructive">*</span></Label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="VD: Xe bị hỏng, thời tiết xấu, không đủ khách..."
+              rows={3}
+              className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCancelOpen(false)}>
+              Đóng
+            </Button>
+            <Button variant="destructive" onClick={handleCancelSubmit}>
+              Xác nhận hủy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

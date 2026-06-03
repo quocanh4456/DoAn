@@ -7,6 +7,8 @@ export const ticketService = {
     seatCount: number;
     pickUpLocation: string;
     dropOffLocation: string;
+    guestName?: string;
+    guestEmail?: string;
   }) => api.post<Ticket>('/tickets', data),
 
   getMyTickets: () => api.get<Ticket[]>('/tickets/my'),
@@ -16,5 +18,13 @@ export const ticketService = {
 
   confirmCash: (id: number) => api.patch<Ticket>(`/tickets/${id}/confirm-cash`),
 
-  cancel: (id: number) => api.patch<Ticket>(`/tickets/${id}/cancel`),
+  cancel: (id: number, reason?: string) => api.patch<Ticket>(`/tickets/${id}/cancel`, { reason }),
+
+  /** Guest: xem thông tin vé bằng email (không cần đăng nhập) */
+  getGuestTicket: (id: number, email: string) =>
+    api.get<Ticket>(`/tickets/${id}/guest-info`, { params: { email } }),
+
+  /** Guest: tạo link thanh toán PayOS (không cần đăng nhập) */
+  createGuestPayment: (id: number, email: string) =>
+    api.post<{ paymentUrl: string; paymentId: number }>(`/tickets/${id}/guest-payment`, { email }),
 };

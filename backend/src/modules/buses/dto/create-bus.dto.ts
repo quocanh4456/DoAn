@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsNumber, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, Min, IsOptional, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBusDto {
@@ -16,4 +16,13 @@ export class CreateBusDto {
   @IsNumber()
   @Min(1)
   totalSeats: number;
+
+  @ApiProperty({
+    example: 'AVAILABLE',
+    description: 'AVAILABLE / IN_TRANSIT / MAINTENANCE / OUT_OF_SERVICE',
+    required: false,
+  })
+  @IsOptional()
+  @IsIn(['AVAILABLE', 'IN_TRANSIT', 'MAINTENANCE', 'OUT_OF_SERVICE'])
+  status?: string;
 }

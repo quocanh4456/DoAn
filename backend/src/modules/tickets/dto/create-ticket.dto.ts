@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsString, IsOptional, IsEmail, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTicketDto {
   @ApiProperty({ example: 1 })
@@ -20,4 +20,14 @@ export class CreateTicketDto {
   @IsNotEmpty()
   @IsString()
   dropOffLocation: string;
+
+  @ApiPropertyOptional({ example: 'Nguyễn Văn A' })
+  @IsOptional()
+  @IsString()
+  guestName?: string;
+
+  @ApiPropertyOptional({ example: 'guest@email.com' })
+  @IsOptional()
+  @IsEmail()
+  guestEmail?: string;
 }
