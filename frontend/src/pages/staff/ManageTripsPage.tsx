@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { tripService } from '@/services/trip.service';
 import { scheduleService } from '@/services/schedule.service';
 import { busService } from '@/services/bus.service';
@@ -30,7 +30,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip, Schedule, Bus } from '@/types';
 
@@ -48,6 +48,10 @@ export function ManageTripsPage() {
 
   const [loading, setLoading] = useState(false);
 
+  // Search & filter
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -62,9 +66,45 @@ export function ManageTripsPage() {
     setTrips(data);
   };
 
-  // Pagination logic
-  const totalPages = Math.max(1, Math.ceil(trips.length / itemsPerPage));
-  const paginatedTrips = trips.slice(
+  // Filter & search logic
+  const filteredTrips = useMemo(() => {
+    let result = trips;
+
+    // Filter by status
+    if (statusFilter !== 'ALL') {
+      result = result.filter((t) => t.status === statusFilter);
+    }
+
+    // Search by text (route, driver, license plate, date, trip ID)
+    const q = searchText.trim().toLowerCase();
+    if (q) {
+      result = result.filter((trip) => {
+        const route = `${trip.schedule?.route?.origin ?? ''} ${trip.schedule?.route?.destination ?? ''}`.toLowerCase();
+        const driver = (trip.driverName ?? '').toLowerCase();
+        const plate = (trip.bus?.licensePlate ?? '').toLowerCase();
+        const date = (trip.departureDate ?? '').toLowerCase();
+        const id = String(trip.id);
+        return (
+          route.includes(q) ||
+          driver.includes(q) ||
+          plate.includes(q) ||
+          date.includes(q) ||
+          id.includes(q)
+        );
+      });
+    }
+
+    return result;
+  }, [trips, searchText, statusFilter]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, statusFilter]);
+
+  // Pagination logic (on filtered results)
+  const totalPages = Math.max(1, Math.ceil(filteredTrips.length / itemsPerPage));
+  const paginatedTrips = filteredTrips.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -212,6 +252,43 @@ export function ManageTripsPage() {
         </Dialog>
       </div>
 
+      {/* Search & Filter bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+        <div className="relative flex-1 w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo tuyến, tài xế, biển số, ngày..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+            <SelectItem value="SCHEDULED">Đã lên lịch</SelectItem>
+            <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
+            <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+          </SelectContent>
+        </Select>
+        {(searchText || statusFilter !== 'ALL') && (
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {filteredTrips.length} / {trips.length} chuyến
+          </span>
+        )}
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -291,7 +368,7 @@ export function ManageTripsPage() {
               <SelectItem value="50">50</SelectItem>
             </SelectContent>
           </Select>
-          <span>/ {trips.length} chuyến</span>
+          <span>/ {filteredTrips.length} chuyến</span>
         </div>
 
         <div className="flex items-center gap-1">
