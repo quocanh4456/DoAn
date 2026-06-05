@@ -25,8 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 
@@ -41,6 +42,18 @@ export function ManageUsersPage() {
     password: '',
     roleId: '2',
   });
+
+  // Edit state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    roleId: '2',
+  });
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchUsers = async () => {
     const { data } = await userService.getAll(search);
@@ -68,6 +81,45 @@ export function ManageUsersPage() {
       fetchUsers();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Thao tác thất bại');
+    }
+  };
+
+  const openEditDialog = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      password: '',
+      roleId: String(user.roleId),
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditLoading(true);
+    try {
+      const payload: any = {
+        fullName: editForm.fullName,
+        email: editForm.email,
+        phone: editForm.phone,
+        roleId: Number(editForm.roleId),
+      };
+      // Chỉ gửi password nếu admin nhập mật khẩu mới
+      if (editForm.password.trim()) {
+        payload.password = editForm.password;
+      }
+      await userService.update(editingUser.id, payload);
+      toast.success('Cập nhật thông tin thành công');
+      setEditOpen(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Cập nhật thất bại');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -149,8 +201,9 @@ export function ManageUsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2">Nhân viên điều hành</SelectItem>
                     <SelectItem value="1">Quản trị viên</SelectItem>
+                    <SelectItem value="2">Nhân viên điều hành</SelectItem>
+                    <SelectItem value="3">Khách hàng</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -187,7 +240,14 @@ export function ManageUsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Không tìm thấy nhân sự nào phù hợp
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell className="font-medium">{user.fullName}</TableCell>
@@ -204,16 +264,92 @@ export function ManageUsersPage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => openEditDialog(user)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDelete(user.id)}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Dialog sửa thông tin nhân sự */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa thông tin nhân sự</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cho {editingUser?.fullName}. Để trống mật khẩu nếu không muốn đổi.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Họ và tên</Label>
+              <Input
+                value={editForm.fullName}
+                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Số điện thoại</Label>
+              <Input
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mật khẩu mới <span className="text-muted-foreground text-xs">(để trống nếu không đổi)</span></Label>
+              <Input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Nhập mật khẩu mới..."
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vai trò</Label>
+              <Select
+                value={editForm.roleId}
+                onValueChange={(v) => setEditForm({ ...editForm, roleId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Quản trị viên</SelectItem>
+                  <SelectItem value="2">Nhân viên điều hành</SelectItem>
+                  <SelectItem value="3">Khách hàng</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full" disabled={editLoading}>
+              {editLoading ? 'Đang cập nhật...' : 'Cập nhật'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

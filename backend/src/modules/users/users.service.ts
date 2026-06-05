@@ -46,9 +46,22 @@ export class UsersService {
 
   async update(id: number, dto: UpdateUserDto) {
     const user = await this.findOne(id);
-    if (dto.password) {
-      dto.password = await bcrypt.hash(dto.password, 10);
+
+    if (dto.email && dto.email !== user.email) {
+      const exists = await this.usersRepo.findOne({
+        where: { email: dto.email },
+      });
+      if (exists && exists.id !== id) {
+        throw new ConflictException('Email đã được sử dụng');
+      }
     }
+
+    if (dto.password && dto.password.trim()) {
+      dto.password = await bcrypt.hash(dto.password, 10);
+    } else {
+      delete dto.password;
+    }
+
     Object.assign(user, dto);
     return this.usersRepo.save(user);
   }
