@@ -30,7 +30,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from 'lucide-react';
+import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip, Schedule, Bus } from '@/types';
 
@@ -55,6 +55,16 @@ export function ManageTripsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // State cho dialog sửa chuyến
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTripId, setEditTripId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    scheduleId: '',
+    busId: '',
+    driverName: '',
+    departureDate: '',
+  });
 
   // State cho dialog hủy chuyến
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -130,6 +140,42 @@ export function ManageTripsPage() {
       fetchTrips();
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Thao tác thất bại';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditDialog = (trip: Trip) => {
+    setEditTripId(trip.id);
+    setEditForm({
+      scheduleId: String(trip.scheduleId ?? trip.schedule?.id ?? ''),
+      busId: String(trip.busId ?? trip.bus?.id ?? ''),
+      driverName: trip.driverName ?? '',
+      departureDate: typeof trip.departureDate === 'string'
+        ? trip.departureDate.slice(0, 10)
+        : '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTripId) return;
+    setLoading(true);
+    try {
+      await tripService.update(editTripId, {
+        scheduleId: Number(editForm.scheduleId),
+        busId: Number(editForm.busId),
+        driverName: editForm.driverName,
+        departureDate: editForm.departureDate,
+      });
+      toast.success('Cập nhật chuyến đi thành công');
+      setEditOpen(false);
+      setEditTripId(null);
+      fetchTrips();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Cập nhật thất bại';
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -333,14 +379,26 @@ export function ManageTripsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openCancelDialog(trip.id)}
-                    disabled={trip.status === 'CANCELLED'}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(trip)}
+                      disabled={trip.status !== 'SCHEDULED'}
+                      title="Sửa chuyến"
+                    >
+                      <Pencil className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openCancelDialog(trip.id)}
+                      disabled={trip.status === 'CANCELLED'}
+                      title="Hủy chuyến"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -409,6 +467,89 @@ export function ManageTripsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Dialog sửa chuyến */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa chuyến đi #{editTripId}</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin chuyến đi. Chỉ sửa được chuyến đang ở trạng thái "Đã lên lịch".
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Khung giờ</Label>
+              <Select
+                value={editForm.scheduleId}
+                onValueChange={(v) => setEditForm({ ...editForm, scheduleId: v })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Chọn khung giờ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {schedules.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.route
+                        ? `${s.route.origin}→${s.route.destination}`
+                        : `#${s.id}`}{' '}
+                      | {s.departureTime}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Xe</Label>
+              <Select
+                value={editForm.busId}
+                onValueChange={(v) => setEditForm({ ...editForm, busId: v })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Chọn xe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buses.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.licensePlate} - {b.busType} ({b.totalSeats} chỗ)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tên tài xế</Label>
+              <Input
+                placeholder="VD: Trần Văn B"
+                value={editForm.driverName}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, driverName: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ngày khởi hành</Label>
+              <Input
+                type="date"
+                value={editForm.departureDate}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, departureDate: e.target.value })
+                }
+                required
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog hủy chuyến */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
