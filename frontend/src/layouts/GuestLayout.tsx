@@ -3,8 +3,13 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter, DialogClose,
+} from '@/components/ui/dialog';
+import {
   Bus, LogOut, User, Ticket, Phone, Search,
   ChevronDown, Settings, LayoutDashboard, Info, HelpCircle, KeyRound, UserCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { ChatWidget } from '@/components/ChatWidget';
 
@@ -13,12 +18,18 @@ export function GuestLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
+    setDropdownOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
     navigate('/');
-    setDropdownOpen(false);
   };
 
   useEffect(() => {
@@ -212,6 +223,40 @@ export function GuestLayout() {
       </main>
 
       <ChatWidget />
+
+      {/* ── Logout confirmation dialog ── */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-2">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+            </div>
+            <DialogTitle className="text-center text-lg">
+              Xác nhận đăng xuất
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản{' '}
+              <span className="font-semibold text-gray-700">{user?.fullName}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-3">
+            <DialogClose
+              render={
+                <Button variant="outline" className="min-w-[100px]" />
+              }
+            >
+              Hủy
+            </DialogClose>
+            <Button
+              onClick={confirmLogout}
+              className="min-w-[100px] bg-red-500 hover:bg-red-600 text-white"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Đăng xuất
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
