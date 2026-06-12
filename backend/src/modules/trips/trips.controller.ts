@@ -80,4 +80,15 @@ export class TripsController {
   ) {
     return this.tripsService.remove(id, cancelReason);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin', 'Staff')
+  @Patch(':id/discount')
+  applyDiscount(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('discountPercent') discountPercent: number,
+  ) {
+    return this.tripsService.applyDiscount(id, discountPercent);
+  }
 }

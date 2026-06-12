@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Search, MapPin, Clock, Bus, ChevronDown, User, Mail } from 'lucide-react';
+import { Search, MapPin, Clock, Bus, ChevronDown, User, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip } from '@/types';
 
@@ -161,6 +161,7 @@ export function CounterBookingPage() {
   const [pickUp, setPickUp] = useState('');
   const [dropOff, setDropOff] = useState('');
   const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -191,6 +192,7 @@ export function CounterBookingPage() {
         pickUpLocation: pickUp,
         dropOffLocation: dropOff,
         guestName: guestName || undefined,
+        guestPhone: guestPhone || undefined,
         guestEmail: guestEmail || undefined,
       });
       if (guestEmail) {
@@ -203,6 +205,7 @@ export function CounterBookingPage() {
       setPickUp('');
       setDropOff('');
       setGuestName('');
+      setGuestPhone('');
       setGuestEmail('');
       handleSearch({ preventDefault: () => {} } as React.FormEvent);
     } catch (err: any) {
@@ -325,6 +328,18 @@ export function CounterBookingPage() {
                           value={guestName}
                           onChange={(e) => setGuestName(e.target.value)}
                           placeholder="VD: Nguyễn Văn A"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="guestPhone">
+                          <Phone className="h-3.5 w-3.5 inline mr-1 text-blue-500" />
+                          SĐT khách
+                        </Label>
+                        <Input
+                          id="guestPhone"
+                          value={guestPhone}
+                          onChange={(e) => setGuestPhone(e.target.value)}
+                          placeholder="VD: 0987654321"
                         />
                       </div>
                       <div className="space-y-1">

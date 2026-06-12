@@ -8,6 +8,7 @@ export const ticketService = {
     pickUpLocation: string;
     dropOffLocation: string;
     guestName?: string;
+    guestPhone?: string;
     guestEmail?: string;
   }) => api.post<Ticket>('/tickets', data),
 

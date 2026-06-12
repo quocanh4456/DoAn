@@ -105,6 +105,7 @@ export function calculateDynamicPrice(
   departureDate: Date | string,
   availableSeats: number,
   totalSeats: number,
+  discountPercent: number = 0,
 ): DynamicPriceResult {
   const dateMult = getPriceMultiplierForDate(departureDate);
   const occupancyMult = getOccupancyMultiplier(availableSeats, totalSeats);
@@ -114,8 +115,11 @@ export function calculateDynamicPrice(
   const rawMultiplier = dateMult * occupancyMult * lastMinuteMult;
   const totalMultiplier = Math.min(rawMultiplier, 1.5);
 
+  // Áp dụng giảm giá (nếu có)
+  const discountFactor = discountPercent > 0 ? (100 - discountPercent) / 100 : 1;
+
   // Làm tròn đến 1.000 VNĐ
-  const finalPrice = Math.round((basePrice * totalMultiplier) / 1000) * 1000;
+  const finalPrice = Math.round((basePrice * totalMultiplier * discountFactor) / 1000) * 1000;
 
   const factors: PriceFactor[] = [
     {
@@ -138,12 +142,17 @@ export function calculateDynamicPrice(
       multiplier: lastMinuteMult,
       active: lastMinuteMult > 1.0,
     },
+    {
+      label: `Khuyến mãi giảm ${discountPercent}%`,
+      multiplier: discountFactor,
+      active: discountPercent > 0,
+    },
   ];
 
   return {
     basePrice: Math.round(basePrice),
     finalPrice,
-    totalMultiplier: Math.round(totalMultiplier * 100) / 100,
+    totalMultiplier: Math.round(totalMultiplier * discountFactor * 100) / 100,
     factors,
   };
 }

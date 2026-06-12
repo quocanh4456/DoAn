@@ -30,17 +30,23 @@ export const tripService = {
   getOne: (id: number) => api.get<Trip>(`/trips/${id}`),
 
   create: (data: {
-    scheduleId: number;
+    scheduleId?: number;
+    routeId?: number;
+    departureTime?: string;
     busId: number;
     driverName: string;
     departureDate: string;
   }) => api.post<Trip>('/trips', data),
 
-  update: (id: number, data: Partial<Trip>) =>
+  update: (id: number, data: Partial<Trip> & { routeId?: number; departureTime?: string }) =>
     api.patch<Trip>(`/trips/${id}`, data),
 
   remove: (id: number, cancelReason: string) =>
     api.delete(`/trips/${id}`, { data: { cancelReason } }),
+
+  /** Áp dụng giảm giá cho chuyến xe */
+  applyDiscount: (id: number, discountPercent: number) =>
+    api.patch<Trip>(`/trips/${id}/discount`, { discountPercent }),
 
   /** AI: Lấy giá vé động cho một chuyến xe */
   getDynamicPrice: (id: number) =>

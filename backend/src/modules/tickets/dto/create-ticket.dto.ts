@@ -26,6 +26,11 @@ export class CreateTicketDto {
   @IsString()
   guestName?: string;
 
+  @ApiPropertyOptional({ example: '0987654321' })
+  @IsOptional()
+  @IsString()
+  guestPhone?: string;
+
   @ApiPropertyOptional({ example: 'guest@email.com' })
   @IsOptional()
   @IsEmail()

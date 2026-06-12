@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { reportService } from '@/services/report.service';
+import { tripService } from '@/services/trip.service';
 import type { ForecastResult, RouteInsight, RfmResult, LowDemandAlert } from '@/services/report.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -895,10 +896,22 @@ export function DashboardPage() {
                           <div className="text-[10px] text-muted-foreground">Kỳ vọng</div>
                         </div>
                         {alert.suggestedDiscount > 0 && (
-                          <div className="flex items-center gap-1 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await tripService.applyDiscount(alert.tripId, alert.suggestedDiscount);
+                                toast.success(`Đã áp dụng giảm ${alert.suggestedDiscount}% cho chuyến ${alert.route}`);
+                                fetchAI(forecastDays);
+                              } catch (err: any) {
+                                toast.error(err?.response?.data?.message || 'Không thể áp dụng giảm giá');
+                              }
+                            }}
+                            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
                             <Tag className="h-3 w-3" />
                             Giảm {alert.suggestedDiscount}%
-                          </div>
+                          </button>
                         )}
                       </div>
                     </div>

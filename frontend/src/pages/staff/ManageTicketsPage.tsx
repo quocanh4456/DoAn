@@ -119,8 +119,8 @@ export function ManageTicketsPage() {
                   <TableRow key={ticket.id}>
                     <TableCell className="font-medium">#{ticket.id}</TableCell>
                     <TableCell>
-                      <div className="text-sm font-medium">{ticket.user?.fullName || ticket.guestName || 'Khách vãng lai'}</div>
-                      <div className="text-xs text-muted-foreground">{ticket.user?.phone || ticket.guestEmail || ''}</div>
+                      <div className="text-sm font-medium">{ticket.guestName || ticket.user?.fullName || 'Khách vãng lai'}</div>
+                      <div className="text-xs text-muted-foreground">{ticket.guestPhone || ticket.guestEmail || ticket.user?.phone || ticket.user?.email || ''}</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">
@@ -226,18 +226,18 @@ export function ManageTicketsPage() {
                 <div className="bg-white border rounded-lg p-3 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Họ tên:</span>
-                    <span className="font-medium">{selectedTicket.user?.fullName || selectedTicket.guestName || 'Khách vãng lai'}</span>
+                    <span className="font-medium">{selectedTicket.guestName || selectedTicket.user?.fullName || 'Khách vãng lai'}</span>
                   </div>
-                  {(selectedTicket.user?.phone) && (
+                  {(selectedTicket.guestPhone || selectedTicket.user?.phone) && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Số điện thoại:</span>
-                      <span className="font-medium">{selectedTicket.user.phone}</span>
+                      <span className="font-medium">{selectedTicket.guestPhone || selectedTicket.user?.phone}</span>
                     </div>
                   )}
-                  {(selectedTicket.user?.email || selectedTicket.guestEmail) && (
+                  {(selectedTicket.guestEmail || selectedTicket.user?.email) && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Email:</span>
-                      <span className="font-medium">{selectedTicket.user?.email || selectedTicket.guestEmail}</span>
+                      <span className="font-medium">{selectedTicket.guestEmail || selectedTicket.user?.email}</span>
                     </div>
                   )}
                 </div>

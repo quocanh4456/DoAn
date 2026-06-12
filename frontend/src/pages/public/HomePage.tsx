@@ -113,12 +113,11 @@ export function HomePage() {
   return (
     <div className="min-h-screen">
       {/* ── Hero Section ────────────────────────────────── */}
-      <section className="relative bg-gradient-to-br from-[#0a2463] via-[#1a3a8f] to-[#1e50b8] pt-10 pb-20 overflow-hidden">
-        {/* Decorative blobs */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
-          <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-1/2 w-[600px] h-40 bg-[#1e50b8]/40 rounded-full blur-2xl" />
+      <section className="relative pt-10 pb-20 overflow-hidden">
+        {/* Background Image & Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img src="/hero-bg.png" alt="Hero Background" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a2463]/90 via-[#1a3a8f]/80 to-transparent" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">

@@ -49,6 +49,9 @@ export class Ticket {
   @Column({ name: 'guest_name', type: 'varchar', nullable: true })
   guestName: string | null;
 
+  @Column({ name: 'guest_phone', type: 'varchar', nullable: true })
+  guestPhone: string | null;
+
   @Column({ name: 'guest_email', type: 'varchar', nullable: true })
   guestEmail: string | null;
 

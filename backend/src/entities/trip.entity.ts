@@ -46,6 +46,9 @@ export class Trip {
   @Column({ name: 'cancel_reason', nullable: true })
   cancelReason: string;
 
+  @Column({ name: 'discount_percent', type: 'int', default: 0 })
+  discountPercent: number;
+
   @OneToMany(() => Ticket, (ticket) => ticket.trip)
   tickets: Ticket[];
 

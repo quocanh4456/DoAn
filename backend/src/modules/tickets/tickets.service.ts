@@ -88,6 +88,7 @@ export class TicketsService {
       trip.departureDate,
       trip.availableSeats,
       totalSeats,
+      trip.discountPercent || 0,
     );
     const totalPrice = dynamicPricing.finalPrice * dto.seatCount;
 
@@ -103,6 +104,7 @@ export class TicketsService {
       totalPrice,
       status: 'PENDING',
       guestName: dto.guestName || null,
+      guestPhone: dto.guestPhone || null,
       guestEmail: dto.guestEmail || null,
     });
     const saved = await this.ticketsRepo.save(ticket);
@@ -153,6 +155,7 @@ export class TicketsService {
       .leftJoinAndSelect('ticket.trip', 'trip')
       .leftJoinAndSelect('trip.schedule', 'schedule')
       .leftJoinAndSelect('schedule.route', 'route')
+      .leftJoinAndSelect('trip.bus', 'bus')
       .leftJoinAndSelect('ticket.user', 'user')
       .orderBy('ticket.createdAt', 'DESC');
 
@@ -208,7 +211,7 @@ export class TicketsService {
   async cancel(id: number, user: any, reason?: string) {
     const ticket = await this.ticketsRepo.findOne({
       where: { id },
-      relations: ['trip'],
+      relations: ['trip', 'trip.schedule'],
     });
     if (!ticket) throw new NotFoundException('Không tìm thấy vé');
     
@@ -216,8 +219,24 @@ export class TicketsService {
     if (ticket.userId !== user.id && !isAdminOrStaff) {
       throw new BadRequestException('Bạn không có quyền hủy vé này');
     }
-    if (ticket.status !== 'PENDING') {
-      throw new BadRequestException('Chỉ có thể hủy vé đang ở trạng thái chờ');
+    if (ticket.status !== 'PENDING' && ticket.status !== 'CONFIRMED') {
+      throw new BadRequestException('Chỉ có thể hủy vé đang ở trạng thái chờ hoặc đã thanh toán');
+    }
+
+    if (ticket.trip && ticket.trip.schedule) {
+      const departureDate = new Date(ticket.trip.departureDate);
+      if (ticket.trip.schedule.departureTime) {
+        const [hours, minutes] = ticket.trip.schedule.departureTime.split(':').map(Number);
+        departureDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      const now = new Date();
+      // Không cho phép hủy nếu thời gian hiện tại đã quá giờ xe chạy hoặc còn cách giờ chạy ít hơn 2 tiếng
+      const limitTime = new Date(departureDate.getTime() - 2 * 60 * 60 * 1000);
+      
+      if (now >= limitTime) {
+        throw new BadRequestException('Không thể hủy vé vì chuyến xe đã xuất bến hoặc đã qua thời gian cho phép hủy (sát giờ khởi hành).');
+      }
     }
 
     ticket.status = 'CANCELLED';

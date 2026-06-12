@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { tripService } from '@/services/trip.service';
-import { scheduleService } from '@/services/schedule.service';
+import { routeService } from '@/services/route.service';
 import { busService } from '@/services/bus.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,15 +32,16 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Trip, Schedule, Bus } from '@/types';
+import type { Trip, Route, Bus } from '@/types';
 
 export function ManageTripsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    scheduleId: '',
+    routeId: '',
+    departureTime: '',
     busId: '',
     driverName: '',
     departureDate: '',
@@ -60,7 +61,8 @@ export function ManageTripsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTripId, setEditTripId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
-    scheduleId: '',
+    routeId: '',
+    departureTime: '',
     busId: '',
     driverName: '',
     departureDate: '',
@@ -121,7 +123,7 @@ export function ManageTripsPage() {
 
   useEffect(() => {
     fetchTrips();
-    scheduleService.getAll().then(({ data }) => setSchedules(data));
+    routeService.getAll().then(({ data }) => setRoutes(data));
     busService.getAll().then(({ data }) => setBuses(data));
   }, []);
 
@@ -130,7 +132,8 @@ export function ManageTripsPage() {
     setLoading(true);
     try {
       await tripService.create({
-        scheduleId: Number(form.scheduleId),
+        routeId: Number(form.routeId),
+        departureTime: form.departureTime,
         busId: Number(form.busId),
         driverName: form.driverName,
         departureDate: form.departureDate,
@@ -149,7 +152,8 @@ export function ManageTripsPage() {
   const openEditDialog = (trip: Trip) => {
     setEditTripId(trip.id);
     setEditForm({
-      scheduleId: String(trip.scheduleId ?? trip.schedule?.id ?? ''),
+      routeId: String(trip.schedule?.route?.id ?? trip.schedule?.routeId ?? ''),
+      departureTime: trip.schedule?.departureTime?.slice(0, 5) ?? '',
       busId: String(trip.busId ?? trip.bus?.id ?? ''),
       driverName: trip.driverName ?? '',
       departureDate: typeof trip.departureDate === 'string'
@@ -165,7 +169,8 @@ export function ManageTripsPage() {
     setLoading(true);
     try {
       await tripService.update(editTripId, {
-        scheduleId: Number(editForm.scheduleId),
+        routeId: Number(editForm.routeId),
+        departureTime: editForm.departureTime,
         busId: Number(editForm.busId),
         driverName: editForm.driverName,
         departureDate: editForm.departureDate,
@@ -230,25 +235,33 @@ export function ManageTripsPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Khung giờ</Label>
+                <Label>Tuyến đường</Label>
                 <Select
-                  value={form.scheduleId}
-                  onValueChange={(v) => setForm({ ...form, scheduleId: v })}
+                  value={form.routeId}
+                  onValueChange={(v) => setForm({ ...form, routeId: v })}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Chọn khung giờ" />
+                    <SelectValue placeholder="Chọn tuyến đường" />
                   </SelectTrigger>
                   <SelectContent>
-                    {schedules.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.route
-                          ? `${s.route.origin}→${s.route.destination}`
-                          : `#${s.id}`}{' '}
-                        | {s.departureTime}
+                    {routes.map((r) => (
+                      <SelectItem key={r.id} value={String(r.id)}>
+                        {r.origin} → {r.destination}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Giờ khởi hành</Label>
+                <Input
+                  type="time"
+                  value={form.departureTime}
+                  onChange={(e) =>
+                    setForm({ ...form, departureTime: e.target.value })
+                  }
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label>Xe</Label>
@@ -479,25 +492,33 @@ export function ManageTripsPage() {
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Khung giờ</Label>
+              <Label>Tuyến đường</Label>
               <Select
-                value={editForm.scheduleId}
-                onValueChange={(v) => setEditForm({ ...editForm, scheduleId: v })}
+                value={editForm.routeId}
+                onValueChange={(v) => setEditForm({ ...editForm, routeId: v })}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Chọn khung giờ" />
+                  <SelectValue placeholder="Chọn tuyến đường" />
                 </SelectTrigger>
                 <SelectContent>
-                  {schedules.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.route
-                        ? `${s.route.origin}→${s.route.destination}`
-                        : `#${s.id}`}{' '}
-                      | {s.departureTime}
+                  {routes.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.origin} → {r.destination}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Giờ khởi hành</Label>
+              <Input
+                type="time"
+                value={editForm.departureTime}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, departureTime: e.target.value })
+                }
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label>Xe</Label>
