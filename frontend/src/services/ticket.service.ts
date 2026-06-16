@@ -10,6 +10,7 @@ export const ticketService = {
     guestName?: string;
     guestPhone?: string;
     guestEmail?: string;
+    promoCode?: string;
   }) => api.post<Ticket>('/tickets', data),
 
   getMyTickets: () => api.get<Ticket[]>('/tickets/my'),

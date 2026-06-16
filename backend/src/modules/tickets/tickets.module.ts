@@ -6,6 +6,7 @@ import { TicketsService } from './tickets.service';
 import { Ticket, Trip, User, Payment } from '../../entities';
 import { PaymentsModule } from '../payments/payments.module';
 import { EmailModule } from '../email/email.module';
+import { PromotionsModule } from '../promotions/promotions.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { EmailModule } from '../email/email.module';
     ConfigModule,
     forwardRef(() => PaymentsModule),
     EmailModule,
+    PromotionsModule,
   ],
   controllers: [TicketsController],
   providers: [TicketsService],

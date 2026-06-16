@@ -6,3 +6,4 @@ export { Bus } from './bus.entity';
 export { Trip } from './trip.entity';
 export { Ticket } from './ticket.entity';
 export { Payment } from './payment.entity';
+export { Promotion } from './promotion.entity';

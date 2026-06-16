@@ -4,14 +4,16 @@ import { tripService } from '@/services/trip.service';
 import type { DynamicPrice } from '@/services/trip.service';
 import { ticketService } from '@/services/ticket.service';
 import { paymentService } from '@/services/payment.service';
+import { promotionService } from '@/services/promotion.service';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Bus, MapPin, Clock, Timer, CreditCard, ArrowRight, ChevronDown, Zap, TrendingUp, Info } from 'lucide-react';
+import { Bus, MapPin, Clock, Timer, CreditCard, ArrowRight, ChevronDown, Zap, TrendingUp, Info, Tag, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip, Ticket } from '@/types';
+import { Input } from '@/components/ui/input';
 
 // ── Danh sách điểm đón/trả cố định theo từng thành phố ──────────────
 const PICKUP_LOCATIONS: Record<string, string[]> = {
@@ -173,6 +175,51 @@ export function BookingPage() {
   const [countdown, setCountdown] = useState(0);
   const [paying, setPaying] = useState(false);
 
+  // Promo code state
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscountAmount, setPromoDiscountAmount] = useState(0);
+  const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+  const [promoLabel, setPromoLabel] = useState('');
+  const [promoApplied, setPromoApplied] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+
+  const handleApplyPromo = async () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    
+    setIsApplyingPromo(true);
+    setPromoError('');
+    try {
+      const basePriceToValidate = dynamicPrice ? dynamicPrice.finalPrice : Number(trip?.schedule?.route?.basePrice || 0);
+      const totalAmount = basePriceToValidate * seatCount;
+      const { data } = await promotionService.validate(code, totalAmount);
+      
+      setPromoDiscountAmount(data.discountAmount);
+      setPromoDiscountPercent(data.discountPercent);
+      setPromoLabel(data.description);
+      setPromoApplied(data.code);
+      toast.success(`Áp dụng mã "${data.code}" thành công!`);
+    } catch (err: any) {
+      setPromoDiscountAmount(0);
+      setPromoDiscountPercent(0);
+      setPromoApplied('');
+      setPromoLabel('');
+      setPromoError(err.response?.data?.message || 'Mã khuyến mãi không hợp lệ.');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoCode('');
+    setPromoDiscountAmount(0);
+    setPromoDiscountPercent(0);
+    setPromoLabel('');
+    setPromoApplied('');
+    setPromoError('');
+  };
+
   // Dynamic pricing state
   const [dynamicPrice, setDynamicPrice] = useState<DynamicPrice | null>(null);
 
@@ -235,6 +282,7 @@ export function BookingPage() {
         seatCount,
         pickUpLocation,
         dropOffLocation,
+        promoCode: promoApplied || undefined,
       });
       setTicket(data);
       setCountdown(data.expiresIn || 600);
@@ -483,13 +531,71 @@ export function BookingPage() {
                 )}
               </div>
 
+              {/* Promo code */}
+              <div className="space-y-2">
+                <Label htmlFor="promoCode">
+                  <Tag className="h-3.5 w-3.5 inline mr-1 text-orange-500" />
+                  Mã khuyến mãi <span className="text-xs text-muted-foreground font-normal">(không bắt buộc)</span>
+                </Label>
+                {promoApplied ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                    <div>
+                      <span className="text-sm font-semibold text-green-700">{promoApplied}</span>
+                      <span className="text-xs text-green-600 ml-2">— {promoLabel}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="text-green-600 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="promoCode"
+                      placeholder="Nhập mã khuyến mãi"
+                      value={promoCode}
+                      onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                      className="flex-1 h-11 font-mono tracking-wider uppercase"
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyPromo}
+                      disabled={!promoCode.trim() || isApplyingPromo}
+                      className="h-11 px-5 shrink-0"
+                    >
+                      {isApplyingPromo ? 'Đang ktra...' : 'Áp dụng'}
+                    </Button>
+                  </div>
+                )}
+                {promoError && (
+                  <p className="text-xs text-red-500 ml-1">{promoError}</p>
+                )}
+              </div>
+
               <Separator />
 
               <div className="flex justify-between items-center bg-primary/5 rounded-xl p-4">
                 <span className="font-medium">Tổng tiền:</span>
-                <span className="text-2xl font-bold text-primary">
-                  {formatPrice(basePrice * seatCount)}
-                </span>
+                <div className="text-right">
+                  {promoDiscountAmount > 0 && (
+                    <div className="text-sm text-muted-foreground line-through">
+                      {formatPrice(basePrice * seatCount)}
+                    </div>
+                  )}
+                  <span className="text-2xl font-bold text-primary">
+                    {formatPrice((basePrice * seatCount) - promoDiscountAmount)}
+                  </span>
+                  {promoDiscountPercent > 0 && (
+                    <span className="ml-2 text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded">
+                      -{promoDiscountPercent}%
+                    </span>
+                  )}
+                </div>
               </div>
 
               <Button

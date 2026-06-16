@@ -69,6 +69,8 @@ export interface Ticket {
   guestName?: string;
   guestEmail?: string;
   cancelReason?: string;
+  promoCode?: string;
+  discountAmount?: number;
 }
 
 export interface Payment {

@@ -107,7 +107,8 @@ export class TripsService {
     }
 
     qb.andWhere('trip.availableSeats > 0');
-    qb.orderBy('schedule.departureTime', 'ASC');
+    qb.orderBy('trip.departureDate', 'ASC');
+    qb.addOrderBy('schedule.departureTime', 'ASC');
 
     const trips = await qb.getMany();
 

@@ -160,6 +160,7 @@ export function DashboardPage() {
   const [forecastDays, setForecastDays]   = useState<7 | 14 | 30>(14);
   const [rfmData, setRfmData]             = useState<RfmResult | null>(null);
   const [lowDemandAlerts, setLowDemandAlerts] = useState<LowDemandAlert[]>([]);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [loadingAI, setLoadingAI]         = useState(false);
   const [aiLoaded, setAiLoaded]           = useState(false);
 
@@ -867,7 +868,7 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="grid gap-3">
-                {lowDemandAlerts.map((alert) => {
+                {(showAllAlerts ? lowDemandAlerts : lowDemandAlerts.slice(0, 5)).map((alert) => {
                   const severityConfig = {
                     high:   { bg: 'bg-red-50 border-red-200',    text: 'text-red-700',    badge: 'bg-red-100 text-red-700',    label: 'Nghiêm trọng' },
                     medium: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700', label: 'Trung bình' },
@@ -917,6 +918,19 @@ export function DashboardPage() {
                     </div>
                   );
                 })}
+                {lowDemandAlerts.length > 5 && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllAlerts(!showAllAlerts)}
+                      className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                    >
+                      {showAllAlerts
+                        ? `↑ Thu gọn`
+                        : `↓ Xem thêm ${lowDemandAlerts.length - 5} chuyến`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

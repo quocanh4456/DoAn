@@ -58,6 +58,12 @@ export class Ticket {
   @Column({ name: 'cancel_reason', type: 'text', nullable: true })
   cancelReason: string | null;
 
+  @Column({ name: 'promo_code', type: 'varchar', length: 30, nullable: true })
+  promoCode: string | null;
+
+  @Column('decimal', { name: 'discount_amount', precision: 12, scale: 0, default: 0 })
+  discountAmount: number;
+
   @OneToMany(() => Payment, (payment) => payment.ticket)
   payments: Payment[];
 

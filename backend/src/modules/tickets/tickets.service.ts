@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { calculateDynamicPrice } from '../../common/utils/pricing.util';
 import { EmailService } from '../email/email.service';
 import { PaymentsService } from '../payments/payments.service';
+import { PromotionsService } from '../promotions/promotions.service';
 
 const LOCK_TTL = 600; // 10 minutes in seconds
 const GUEST_LOCK_TTL = 1800; // 30 minutes for guest bookings
@@ -33,6 +34,7 @@ export class TicketsService {
     private emailService: EmailService,
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
+    private promotionsService: PromotionsService,
   ) {
     this.redis = new Redis({
       host: this.configService.get('REDIS_HOST', 'localhost'),
@@ -90,7 +92,17 @@ export class TicketsService {
       totalSeats,
       trip.discountPercent || 0,
     );
-    const totalPrice = dynamicPricing.finalPrice * dto.seatCount;
+    let totalPrice = dynamicPricing.finalPrice * dto.seatCount;
+
+    // Áp dụng mã khuyến mãi (nếu có)
+    let promoCode: string | null = null;
+    let discountAmount = 0;
+    if (dto.promoCode) {
+      const promoResult = await this.promotionsService.validate(dto.promoCode, totalPrice);
+      promoCode = promoResult.code;
+      discountAmount = promoResult.discountAmount;
+      totalPrice = totalPrice - discountAmount;
+    }
 
     const isGuestBooking = !!dto.guestEmail;
     const lockTtl = isGuestBooking ? GUEST_LOCK_TTL : LOCK_TTL;
@@ -102,6 +114,8 @@ export class TicketsService {
       pickUpLocation: dto.pickUpLocation,
       dropOffLocation: dto.dropOffLocation,
       totalPrice,
+      promoCode,
+      discountAmount,
       status: 'PENDING',
       guestName: dto.guestName || null,
       guestPhone: dto.guestPhone || null,
@@ -132,10 +146,16 @@ export class TicketsService {
       this.sendGuestPaymentEmail(saved, trip).catch(() => {});
     }
 
+    // Tăng lượt sử dụng mã KM
+    if (promoCode) {
+      this.promotionsService.incrementUsage(promoCode).catch(() => {});
+    }
+
     return {
       ...saved,
       expiresIn: lockTtl,
       totalPrice,
+      discountAmount,
     };
   }
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Bus,
   MapPin,
@@ -19,7 +20,9 @@ import {
   TrendingUp,
   Users,
   Zap,
-  ChevronRight,
+  Tag,
+  CalendarClock,
+  Info,
   Mic,
   MicOff,
 } from 'lucide-react';
@@ -50,15 +53,65 @@ const stats = [
 ];
 
 const promoItems = [
-  { label: 'Giảm 20%', desc: 'Cho chuyến đi đầu tiên', color: 'from-orange-500 to-red-500', badge: 'HOT' },
-  { label: 'Combo 2 vé', desc: 'Chỉ tính tiền 1.8 vé', color: 'from-blue-500 to-indigo-600', badge: 'MỚI' },
-  { label: 'Thứ 3 vui', desc: 'Giảm 15% mọi tuyến', color: 'from-green-500 to-teal-600', badge: '' },
+  {
+    label: 'Giảm 20% chuyến đầu tiên',
+    desc: 'Áp dụng cho khách hàng mới đăng ký tài khoản. Không giới hạn tuyến đường.',
+    tag: 'Ưu đãi',
+    tagColor: 'bg-orange-100 text-orange-700',
+    border: 'border-orange-200',
+    accent: 'text-orange-600',
+    accentBg: 'bg-orange-50',
+    code: 'NEWUSER20',
+    expiry: '31/07/2026',
+    terms: [
+      'Áp dụng cho khách hàng đăng ký tài khoản mới lần đầu.',
+      'Giảm tối đa 100.000đ trên mỗi vé.',
+      'Không áp dụng cùng các chương trình khuyến mãi khác.',
+      'Mỗi tài khoản chỉ được sử dụng 1 lần.',
+    ],
+  },
+  {
+    label: 'Combo 2 vé tiết kiệm',
+    desc: 'Đặt 2 vé cùng chuyến chỉ tính tiền 1.8 vé. Đi cùng bạn bè thêm vui.',
+    tag: 'Mới',
+    tagColor: 'bg-blue-100 text-blue-700',
+    border: 'border-blue-200',
+    accent: 'text-blue-600',
+    accentBg: 'bg-blue-50',
+    code: 'COMBO2VE',
+    expiry: '30/06/2026',
+    terms: [
+      'Đặt 2 vé cùng chuyến, cùng lúc để được áp dụng.',
+      'Tương đương giảm 10% trên tổng giá 2 vé.',
+      'Áp dụng tất cả tuyến đường.',
+      'Có thể kết hợp với ưu đãi thành viên.',
+    ],
+  },
+  {
+    label: 'Thứ 3 giảm 15%',
+    desc: 'Mỗi thứ Ba hàng tuần, giảm 15% tất cả các tuyến. Đặt sớm hưởng giá tốt.',
+    tag: 'Hàng tuần',
+    tagColor: 'bg-green-100 text-green-700',
+    border: 'border-green-200',
+    accent: 'text-green-600',
+    accentBg: 'bg-green-50',
+    code: 'THU3VUI',
+    expiry: 'Không giới hạn',
+    terms: [
+      'Chỉ áp dụng cho các chuyến khởi hành vào thứ Ba.',
+      'Đặt vé trước ít nhất 1 ngày để được áp dụng.',
+      'Giảm tối đa 80.000đ trên mỗi vé.',
+      'Không giới hạn số lần sử dụng.',
+    ],
+  },
 ];
+
 
 export function HomePage() {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [date, setDate] = useState('');
+  const [selectedPromo, setSelectedPromo] = useState<typeof promoItems[number] | null>(null);
   const [returnDate, setReturnDate] = useState('');
   const [tripType, setTripType] = useState<'one-way' | 'round-trip'>('one-way');
   const navigate = useNavigate();
@@ -304,29 +357,96 @@ export function HomePage() {
       {/* ── Promo Banners ───────────────────────────────── */}
       <section className="py-10 bg-gray-50">
         <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-800">Khuyến mãi đang diễn ra</h2>
+          </div>
           <div className="grid md:grid-cols-3 gap-4">
             {promoItems.map((promo) => (
               <div
                 key={promo.label}
-                className={`relative bg-gradient-to-r ${promo.color} rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition-transform overflow-hidden`}
+                className={`bg-white rounded-xl p-5 border ${promo.border} hover:shadow-md transition-shadow cursor-pointer`}
+                onClick={() => setSelectedPromo(promo)}
               >
-                <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full" />
-                <div className="absolute -right-2 -top-2 w-16 h-16 bg-white/10 rounded-full" />
-                {promo.badge && (
-                  <span className="inline-block bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full mb-2">
-                    {promo.badge}
-                  </span>
-                )}
-                <h3 className="text-white font-bold text-xl">{promo.label}</h3>
-                <p className="text-white/80 text-sm mt-1">{promo.desc}</p>
-                <button className="mt-3 flex items-center gap-1 text-white/90 hover:text-white text-xs font-medium">
-                  Xem ngay <ChevronRight className="h-3.5 w-3.5" />
+                <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-md ${promo.tagColor} mb-3`}>
+                  {promo.tag}
+                </span>
+                <h3 className="font-bold text-gray-800 text-lg leading-snug">{promo.label}</h3>
+                <p className="text-gray-500 text-sm mt-2 leading-relaxed">{promo.desc}</p>
+                <button className={`mt-4 text-sm font-semibold ${promo.accent} hover:underline`}>
+                  Xem chi tiết →
                 </button>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* ── Promo Detail Dialog ─────────────────────────── */}
+      <Dialog open={!!selectedPromo} onOpenChange={(open) => !open && setSelectedPromo(null)}>
+        <DialogContent className="sm:max-w-md">
+          {selectedPromo && (
+            <>
+              <DialogHeader>
+                <div className="mb-2">
+                  <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-md ${selectedPromo.tagColor}`}>
+                    {selectedPromo.tag}
+                  </span>
+                </div>
+                <DialogTitle className="text-xl">{selectedPromo.label}</DialogTitle>
+                <DialogDescription className="text-sm pt-1">
+                  {selectedPromo.desc}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                {/* Mã khuyến mãi */}
+                <div className={`flex items-center justify-between p-3 rounded-lg ${selectedPromo.accentBg} border ${selectedPromo.border}`}>
+                  <div className="flex items-center gap-2">
+                    <Tag className={`h-4 w-4 ${selectedPromo.accent}`} />
+                    <span className="text-sm text-gray-600">Mã khuyến mãi</span>
+                  </div>
+                  <span className={`font-bold font-mono tracking-wider ${selectedPromo.accent}`}>
+                    {selectedPromo.code}
+                  </span>
+                </div>
+
+                {/* Hạn sử dụng */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <CalendarClock className="h-4 w-4 text-gray-400" />
+                  <span>Hạn sử dụng: <strong className="text-gray-800">{selectedPromo.expiry}</strong></span>
+                </div>
+
+                {/* Điều kiện */}
+                <div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                    <Info className="h-4 w-4 text-gray-400" />
+                    Điều kiện áp dụng
+                  </div>
+                  <ul className="space-y-1.5">
+                    {selectedPromo.terms.map((term, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-500">
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                        {term}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Nút áp dụng */}
+                <Button
+                  className="w-full mt-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedPromo.code);
+                    toast.success(`Đã sao chép mã "${selectedPromo.code}"`);
+                  }}
+                >
+                  Sao chép mã khuyến mãi
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Popular Routes ──────────────────────────────── */}
       <section className="py-14 bg-white">

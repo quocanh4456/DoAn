@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { tripService } from '@/services/trip.service';
 import { ticketService } from '@/services/ticket.service';
+import { routeService } from '@/services/route.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Search, MapPin, Clock, Bus, ChevronDown, User, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Trip } from '@/types';
+import dayjs from 'dayjs';
 
 // ── Danh sách điểm đón/trả cố định theo từng thành phố ──────────────
 const PICKUP_LOCATIONS: Record<string, string[]> = {
@@ -164,6 +166,16 @@ export function CounterBookingPage() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [routes, setRoutes] = useState<{ origin: string; destination: string }[]>([]);
+
+  useEffect(() => {
+    routeService.getAll().then((res) => {
+      setRoutes(res.data);
+    });
+  }, []);
+
+  const uniqueOrigins = Array.from(new Set(routes.map(r => r.origin)));
+  const uniqueDestinations = Array.from(new Set(routes.map(r => r.destination)));
 
   // Reset dropdowns when trip changes
   useEffect(() => {
@@ -225,18 +237,28 @@ export function CounterBookingPage() {
       <Card className="mb-6">
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="flex gap-3 flex-wrap">
-            <Input
-              placeholder="Điểm đi"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              className="flex-1 min-w-[150px]"
-            />
-            <Input
-              placeholder="Điểm đến"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="flex-1 min-w-[150px]"
-            />
+            <div className="relative flex-1 min-w-[150px]">
+              <select
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                className="w-full h-10 px-3 py-2 border rounded-md bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none"
+              >
+                <option value="">-- Chọn điểm đi --</option>
+                {uniqueOrigins.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+            </div>
+            <div className="relative flex-1 min-w-[150px]">
+              <select
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="w-full h-10 px-3 py-2 border rounded-md bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none"
+              >
+                <option value="">-- Chọn điểm đến --</option>
+                {uniqueDestinations.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+            </div>
             <Input
               type="date"
               value={date}
@@ -272,7 +294,7 @@ export function CounterBookingPage() {
                 </div>
                 <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                   <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {trip.schedule?.departureTime}
+                    <Clock className="h-3 w-3" /> {trip.schedule?.departureTime} - {dayjs(trip.departureDate).format('DD/MM/YYYY')}
                   </span>
                   <span className="flex items-center gap-1">
                     <Bus className="h-3 w-3" /> {trip.bus?.busType}

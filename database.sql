@@ -121,6 +121,24 @@ CREATE TABLE payments (
 ) ENGINE=InnoDB;
 
 -- =====================================================
+-- 9. Bảng Promotions (Khuyến mãi)
+-- =====================================================
+CREATE TABLE promotions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(30) UNIQUE NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    discount_percent INT NOT NULL,
+    max_discount DECIMAL(12,0) DEFAULT 0,
+    max_usage INT DEFAULT 0,
+    used_count INT DEFAULT 0,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- =====================================================
 -- SEED DATA (Dữ liệu mẫu)
 -- =====================================================
 
@@ -180,3 +198,9 @@ INSERT INTO trips (schedule_id, bus_id, driver_name, departure_date, available_s
 (4,  2, 'Phạm Văn Em',     CURDATE() + INTERVAL 3 DAY, 20, 'SCHEDULED'),
 (6,  4, 'Trần Văn Bình',   CURDATE() + INTERVAL 3 DAY, 24, 'SCHEDULED'),
 (17, 6, 'Nguyễn Văn Cường', CURDATE() + INTERVAL 3 DAY, 20, 'SCHEDULED');
+
+-- Promotions (Khuyến mãi)
+INSERT INTO promotions (code, description, discount_percent, max_discount, max_usage, start_date, end_date) VALUES
+('NEWUSER20', 'Giảm 20% cho chuyến đầu tiên',  20, 100000, 0, '2026-01-01', '2026-12-31'),
+('COMBO2VE',  'Combo 2 vé tiết kiệm',           10, 0,      0, '2026-01-01', '2026-06-30'),
+('THU3VUI',   'Thứ 3 giảm 15% mọi tuyến',      15, 80000,  0, '2026-01-01', '2026-12-31');

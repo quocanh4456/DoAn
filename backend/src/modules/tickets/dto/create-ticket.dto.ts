@@ -35,4 +35,9 @@ export class CreateTicketDto {
   @IsOptional()
   @IsEmail()
   guestEmail?: string;
+
+  @ApiPropertyOptional({ example: 'NEWUSER20' })
+  @IsOptional()
+  @IsString()
+  promoCode?: string;
 }
