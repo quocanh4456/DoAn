@@ -57,7 +57,6 @@ export function GuestPaymentPage() {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -71,7 +70,6 @@ export function GuestPaymentPage() {
     );
   }
 
-  // Error state
   if (error || !ticket) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -96,7 +94,6 @@ export function GuestPaymentPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f2461] via-[#1a3a8f] to-gray-100">
-      {/* Header */}
       <div className="text-center pt-10 pb-8 px-4">
         <div className="flex items-center justify-center gap-2 mb-4">
           <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/40">
@@ -112,10 +109,8 @@ export function GuestPaymentPage() {
         </p>
       </div>
 
-      {/* Main card */}
       <div className="container mx-auto px-4 pb-10 max-w-lg -mt-2">
         <Card className="shadow-2xl border-0 rounded-2xl overflow-hidden">
-          {/* Status badge */}
           <div className={`px-6 py-3 text-center text-sm font-semibold ${
             isPending
               ? 'bg-amber-50 text-amber-700 border-b border-amber-100'
@@ -154,13 +149,11 @@ export function GuestPaymentPage() {
           </CardHeader>
 
           <CardContent className="space-y-5">
-            {/* Ticket ID */}
             <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 text-center">
               <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Mã vé</span>
               <p className="text-3xl font-extrabold text-[#1a3a8f] mt-1">#{ticket.id}</p>
             </div>
 
-            {/* Trip details */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
                 <span className="text-xs text-gray-500">📅 Ngày đi</span>
@@ -180,7 +173,6 @@ export function GuestPaymentPage() {
               </div>
             </div>
 
-            {/* Pickup / Dropoff */}
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-green-500 shrink-0" />
@@ -200,7 +192,6 @@ export function GuestPaymentPage() {
 
             <Separator />
 
-            {/* Total price */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 text-center">
               <span className="text-xs text-blue-600 font-semibold uppercase tracking-widest">Tổng tiền</span>
               <p className="text-3xl font-extrabold text-[#1a3a8f] mt-2">
@@ -208,7 +199,6 @@ export function GuestPaymentPage() {
               </p>
             </div>
 
-            {/* Payment button */}
             {isPending && (
               <div className="space-y-3">
                 <button
@@ -248,7 +238,6 @@ export function GuestPaymentPage() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-gray-400 text-xs">
             Cần hỗ trợ? Liên hệ hotline <strong className="text-gray-600">1900 0000</strong>

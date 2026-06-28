@@ -19,8 +19,8 @@ function getBusEmoji(busType: string): string {
   if (!busType) return '🚌';
   const t = busType.toLowerCase();
   if (t.includes('limousine')) return '🚐';
-  if (t.includes('gi') && t.includes('ng') && t.includes('n')) return '🛌'; // Giường nằm
-  if (t.includes('gh') && t.includes('ng')) return '💺'; // Ghế ngồi
+  if (t.includes('gi') && t.includes('ng') && t.includes('n')) return '🛌';
+  if (t.includes('gh') && t.includes('ng')) return '💺';
   return '🚌';
 }
 
@@ -53,7 +53,6 @@ export function SearchPage() {
     }
   };
 
-  // Re-run search whenever URL search params change (e.g. navigating from HomePage)
   useEffect(() => {
     const o = searchParams.get('origin') || '';
     const d = searchParams.get('destination') || '';
@@ -118,12 +117,10 @@ export function SearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ── Search Bar ───────────────────────────────────── */}
       <div className="bg-gradient-to-r from-[#0a2463] to-[#1a3a8f] py-5 shadow-xl">
         <div className="container mx-auto px-4">
           <form onSubmit={handleSearch}>
             <div className="flex flex-col md:flex-row gap-3 items-end">
-              {/* Origin */}
               <div className="flex-1 w-full">
                 <label className="text-xs font-medium text-white/70 mb-1.5 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
@@ -158,7 +155,6 @@ export function SearchPage() {
                 </div>
               </div>
 
-              {/* Swap */}
               <button
                 type="button"
                 onClick={handleSwap}
@@ -168,7 +164,6 @@ export function SearchPage() {
                 <ArrowLeftRight className="h-4 w-4" />
               </button>
 
-              {/* Destination */}
               <div className="flex-1 w-full">
                 <label className="text-xs font-medium text-white/70 mb-1.5 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
@@ -203,7 +198,6 @@ export function SearchPage() {
                 </div>
               </div>
 
-              {/* Date */}
               <div className="flex-1 w-full">
                 <label className="text-xs font-medium text-white/70 mb-1.5 flex items-center gap-1">
                   <CalendarDays className="h-3 w-3" />
@@ -230,11 +224,9 @@ export function SearchPage() {
         </div>
       </div>
 
-      {/* ── Results Area ────────────────────────────────── */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
 
-          {/* ── Filters sidebar (mobile toggle) ── */}
           <div className="lg:w-64 shrink-0">
             <button
               className="lg:hidden w-full flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 mb-3 shadow-sm"
@@ -252,7 +244,6 @@ export function SearchPage() {
                     Bộ lọc
                   </h3>
 
-                  {/* Sort */}
                   <div className="mb-5">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Sắp xếp theo</p>
                     <div className="space-y-2">
@@ -277,7 +268,6 @@ export function SearchPage() {
                     </div>
                   </div>
 
-                  {/* Quick stats */}
                   {trips.length > 0 && (
                     <div className="border-t border-gray-100 pt-4">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Tổng quan</p>
@@ -300,9 +290,7 @@ export function SearchPage() {
             </div>
           </div>
 
-          {/* ── Trip results ── */}
           <div className="flex-1 min-w-0">
-            {/* Results header */}
             {trips.length > 0 && (
               <div className="flex items-center justify-between mb-4">
                 <p className="text-gray-600 text-sm">
@@ -320,7 +308,6 @@ export function SearchPage() {
               </div>
             )}
 
-            {/* Loading state */}
             {loading && (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
@@ -329,7 +316,6 @@ export function SearchPage() {
               </div>
             )}
 
-            {/* Empty state */}
             {trips.length === 0 && !loading && (
               <div className="text-center py-20">
                 <div className="w-24 h-24 rounded-full bg-[#1a3a8f]/10 flex items-center justify-center mx-auto mb-5">
@@ -352,7 +338,6 @@ export function SearchPage() {
               </div>
             )}
 
-            {/* Trip cards */}
             <div className="space-y-3">
               {sortedTrips.map((trip) => {
                 const price = trip.schedule?.route?.basePrice || 0;
@@ -367,14 +352,11 @@ export function SearchPage() {
                   >
                     <div className="p-0">
                       <div className="flex flex-col md:flex-row">
-                        {/* Bus type badge */}
                         <div className="md:w-4 bg-gradient-to-b from-[#1a3a8f] to-[#1e50b8] hidden md:block rounded-l-lg" />
 
                         <div className="flex-1 p-5">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            {/* Left: route info */}
                             <div className="flex-1 min-w-0">
-                              {/* Route name */}
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-2xl">{emoji}</span>
                                 <div>
@@ -387,7 +369,6 @@ export function SearchPage() {
                                 </div>
                               </div>
 
-                              {/* Trip details */}
                               <div className="flex flex-wrap gap-2">
                                 <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-full font-medium">
                                   <Clock className="h-3.5 w-3.5" />
@@ -415,7 +396,6 @@ export function SearchPage() {
                               </div>
                             </div>
 
-                            {/* Right: price & action */}
                             <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center gap-3 md:min-w-[140px]">
                               <div className="text-right">
                                 <div className="text-2xl font-bold text-orange-500">

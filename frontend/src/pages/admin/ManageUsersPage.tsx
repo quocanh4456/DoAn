@@ -43,7 +43,6 @@ export function ManageUsersPage() {
     roleId: '2',
   });
 
-  // Edit state
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
@@ -107,7 +106,6 @@ export function ManageUsersPage() {
         phone: editForm.phone,
         roleId: Number(editForm.roleId),
       };
-      // Chỉ gửi password nếu admin nhập mật khẩu mới
       if (editForm.password.trim()) {
         payload.password = editForm.password;
       }
@@ -145,11 +143,9 @@ export function ManageUsersPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quản lý nhân sự</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Thêm nhân viên
-            </Button>
+          <DialogTrigger render={<Button />}>
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm nhân viên
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -283,7 +279,6 @@ export function ManageUsersPage() {
         </Table>
       </div>
 
-      {/* Dialog sửa thông tin nhân sự */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>

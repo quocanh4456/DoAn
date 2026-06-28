@@ -49,15 +49,12 @@ export function ManageTripsPage() {
 
   const [loading, setLoading] = useState(false);
 
-  // Search & filter
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // State cho dialog sửa chuyến
   const [editOpen, setEditOpen] = useState(false);
   const [editTripId, setEditTripId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
@@ -68,7 +65,6 @@ export function ManageTripsPage() {
     departureDate: '',
   });
 
-  // State cho dialog hủy chuyến
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelTripId, setCancelTripId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -78,16 +74,13 @@ export function ManageTripsPage() {
     setTrips(data);
   };
 
-  // Filter & search logic
   const filteredTrips = useMemo(() => {
     let result = trips;
 
-    // Filter by status
     if (statusFilter !== 'ALL') {
       result = result.filter((t) => t.status === statusFilter);
     }
 
-    // Search by text (route, driver, license plate, date, trip ID)
     const q = searchText.trim().toLowerCase();
     if (q) {
       result = result.filter((trip) => {
@@ -109,12 +102,10 @@ export function ManageTripsPage() {
     return result;
   }, [trips, searchText, statusFilter]);
 
-  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchText, statusFilter]);
 
-  // Pagination logic (on filtered results)
   const totalPages = Math.max(1, Math.ceil(filteredTrips.length / itemsPerPage));
   const paginatedTrips = filteredTrips.slice(
     (currentPage - 1) * itemsPerPage,
@@ -223,11 +214,9 @@ export function ManageTripsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quản lý chuyến đi</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
+          <DialogTrigger render={<Button />}>
               <Plus className="h-4 w-4 mr-2" />
               Tạo chuyến
-            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -311,7 +300,6 @@ export function ManageTripsPage() {
         </Dialog>
       </div>
 
-      {/* Search & Filter bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
         <div className="relative flex-1 w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -419,7 +407,6 @@ export function ManageTripsPage() {
         </Table>
       </div>
 
-      {/* Pagination controls */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Hiển thị</span>
@@ -481,7 +468,6 @@ export function ManageTripsPage() {
         </div>
       </div>
 
-      {/* Dialog sửa chuyến */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -572,7 +558,6 @@ export function ManageTripsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog hủy chuyến */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent>
           <DialogHeader>

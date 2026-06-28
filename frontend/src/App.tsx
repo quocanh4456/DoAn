@@ -45,7 +45,6 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
           <Route element={<GuestLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
@@ -55,10 +54,8 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
 
-          {/* Guest payment (standalone, no layout wrapper) */}
           <Route path="/guest-payment/:ticketId" element={<GuestPaymentPage />} />
 
-          {/* Customer routes */}
           <Route element={<GuestLayout />}>
             <Route element={<ProtectedRoute allowedRoles={['Customer', 'Staff', 'Admin']} />}>
               <Route path="/customer/booking/:tripId" element={<BookingPage />} />
@@ -69,7 +66,6 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Staff & Admin routes */}
           <Route element={<ProtectedRoute allowedRoles={['Staff', 'Admin']} />}>
             <Route element={<AdminLayout />}>
               <Route path="/staff/routes" element={<ManageRoutesPage />} />
@@ -81,7 +77,6 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Admin-only routes */}
           <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<DashboardPage />} />

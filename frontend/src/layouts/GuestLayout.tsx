@@ -45,12 +45,10 @@ export function GuestLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
 
-      {/* ── Single slim Vexere-style header ───────────────── */}
       <header className="bg-[#1a3a8f] text-white sticky top-0 z-50 shadow-md">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 gap-3">
 
-            {/* Left: logo + cam kết */}
             <div className="flex items-center gap-3 min-w-0">
               <Link to="/" className="flex items-center gap-2 shrink-0 group">
                 <div className="bg-orange-500 group-hover:bg-orange-400 rounded-lg p-1.5 transition-colors">
@@ -71,10 +69,7 @@ export function GuestLayout() {
               </div>
             </div>
 
-            {/* Right: nav links + actions */}
             <div className="flex items-center gap-1 shrink-0">
-
-
 
               {(user?.role === 'Staff' || user?.role === 'Admin') && (
                 <Link
@@ -103,10 +98,8 @@ export function GuestLayout() {
                 Trở thành đối tác
               </a>
 
-              {/* Divider */}
               <div className="hidden md:block w-px h-5 bg-white/20 mx-1" />
 
-              {/* Help */}
               <button
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
                 title="Trợ giúp"
@@ -114,7 +107,6 @@ export function GuestLayout() {
                 <HelpCircle className="h-4 w-4 text-white/60" />
               </button>
 
-              {/* Hotline */}
               <a
                 href="tel:19000000"
                 className="hidden sm:flex items-center gap-1.5 border border-white/35 hover:border-white hover:bg-white/10 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all whitespace-nowrap"
@@ -123,7 +115,6 @@ export function GuestLayout() {
                 Hotline 24/7
               </a>
 
-              {/* Auth */}
               {isAuthenticated && user ? (
                 <div className="relative ml-1" ref={dropdownRef}>
                   <button
@@ -224,7 +215,6 @@ export function GuestLayout() {
 
       <ChatWidget />
 
-      {/* ── Logout confirmation dialog ── */}
       <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

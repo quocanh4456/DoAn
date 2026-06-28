@@ -18,8 +18,8 @@ import { EmailService } from '../email/email.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PromotionsService } from '../promotions/promotions.service';
 
-const LOCK_TTL = 600; // 10 minutes in seconds
-const GUEST_LOCK_TTL = 1800; // 30 minutes for guest bookings
+const LOCK_TTL = 600;
+const GUEST_LOCK_TTL = 1800;
 
 @Injectable()
 export class TicketsService {
@@ -78,7 +78,6 @@ export class TicketsService {
       }
     } catch (e) {
       if (e instanceof ConflictException) throw e;
-      // Redis unavailable: fall back to DB-based check
       if (trip.availableSeats < dto.seatCount) {
         throw new ConflictException('Hết chỗ trống');
       }
@@ -94,7 +93,6 @@ export class TicketsService {
     );
     let totalPrice = dynamicPricing.finalPrice * dto.seatCount;
 
-    // Áp dụng mã khuyến mãi (nếu có)
     let promoCode: string | null = null;
     let discountAmount = 0;
     if (dto.promoCode) {
@@ -134,19 +132,16 @@ export class TicketsService {
       /* non-fatal if Redis is down */
     }
 
-    // Update DB available seats
     await this.tripsRepo.decrement(
       { id: trip.id },
       'availableSeats',
       dto.seatCount,
     );
 
-    // If guest booking with email → send email with payment link
     if (isGuestBooking) {
       this.sendGuestPaymentEmail(saved, trip).catch(() => {});
     }
 
-    // Tăng lượt sử dụng mã KM
     if (promoCode) {
       this.promotionsService.incrementUsage(promoCode).catch(() => {});
     }
@@ -160,7 +155,6 @@ export class TicketsService {
   }
 
   async findByUser(userId: number) {
-    // Auto-expire old PENDING tickets before returning
     await this.expireOldPendingTickets();
 
     return this.ticketsRepo.find({
@@ -181,10 +175,8 @@ export class TicketsService {
 
     if (search) {
       if (!isNaN(Number(search))) {
-        // Search by ticket id or phone
         qb.where('ticket.id = :id OR user.phone LIKE :phone', { id: Number(search), phone: `%${search}%` });
       } else {
-        // Search by user name or status
         qb.where('user.fullName LIKE :name OR ticket.status = :status', { name: `%${search}%`, status: search });
       }
     }
@@ -203,7 +195,6 @@ export class TicketsService {
     ticket.status = 'CONFIRMED';
     await this.ticketsRepo.save(ticket);
 
-    // Create cash payment record
     const payment = this.paymentsRepo.create({
       ticketId: ticket.id,
       amount: ticket.totalPrice,
@@ -220,7 +211,6 @@ export class TicketsService {
       /* non-fatal */
     }
 
-    // Send confirmation email
     if (ticket.user) {
       this.emailService.sendTicketConfirmation(ticket, ticket.user).catch(() => {});
     }
@@ -251,7 +241,6 @@ export class TicketsService {
       }
       
       const now = new Date();
-      // Không cho phép hủy nếu thời gian hiện tại đã quá giờ xe chạy hoặc còn cách giờ chạy ít hơn 2 tiếng
       const limitTime = new Date(departureDate.getTime() - 2 * 60 * 60 * 1000);
       
       if (now >= limitTime) {
@@ -265,7 +254,6 @@ export class TicketsService {
     }
     await this.ticketsRepo.save(ticket);
 
-    // Restore seats
     await this.tripsRepo.increment(
       { id: ticket.tripId },
       'availableSeats',
@@ -299,7 +287,6 @@ export class TicketsService {
       /* non-fatal */
     }
 
-    // Send confirmation email (fire-and-forget, non-blocking)
     this.usersRepo.findOne({ where: { id: ticket.userId } }).then((user) => {
       if (user) {
         this.emailService.sendTicketConfirmation(ticket, user).catch(() => {});
@@ -333,10 +320,7 @@ export class TicketsService {
     }
   }
 
-  /**
-   * Auto-expire PENDING tickets older than 10 minutes.
-   * Runs every minute via cron and also on-demand when user views their tickets.
-   */
+  
   @Cron(CronExpression.EVERY_MINUTE)
   async expireOldPendingTickets() {
     const cutoff = new Date(Date.now() - LOCK_TTL * 1000);
@@ -353,10 +337,7 @@ export class TicketsService {
     }
   }
 
-  /**
-   * Get ticket info for guest payment page.
-   * Validates guest email to prevent unauthorized access.
-   */
+  
   async getGuestTicket(ticketId: number, email: string) {
     const ticket = await this.ticketsRepo.findOne({
       where: { id: ticketId },
@@ -369,13 +350,9 @@ export class TicketsService {
     return ticket;
   }
 
-  /**
-   * Create PayOS link and send email to guest.
-   * Fire-and-forget, non-blocking.
-   */
+  
   private async sendGuestPaymentEmail(ticket: Ticket, trip: Trip) {
     try {
-      // Build guest payment page URL
       const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
       const paymentPageUrl = `${frontendUrl}/guest-payment/${ticket.id}?email=${encodeURIComponent(ticket.guestEmail!)}`;
 
@@ -387,7 +364,6 @@ export class TicketsService {
         paymentPageUrl,
       );
     } catch (err) {
-      // Non-fatal: log but don't throw
       console.error('Failed to send guest payment email:', err);
     }
   }

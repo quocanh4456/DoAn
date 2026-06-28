@@ -100,23 +100,23 @@ export const reportService = {
   getRouteRevenue: (from: string, to: string) =>
     api.get('/reports/route-revenue', { params: { from, to } }),
 
-  /** AI: Dự báo doanh thu N ngày tới */
+  
   getForecast: (days: number = 14) =>
     api.get<ForecastResult>('/reports/forecast', { params: { days } }),
 
-  /** AI: Phân tích và khuyến nghị tuyến đường */
+  
   getRouteInsights: () =>
     api.get<RouteInsight[]>('/reports/route-insights'),
 
-  /** AI: Phân khúc khách hàng RFM */
+  
   getRfmSegments: () =>
     api.get<RfmResult>('/reports/rfm-segments'),
 
-  /** AI: Cảnh báo chuyến ít khách */
+  
   getLowDemandAlerts: () =>
     api.get<LowDemandAlert[]>('/reports/low-demand-alerts'),
 
-  /** Staff: Báo cáo ca làm việc */
+  
   getShiftReport: () =>
     api.get<{
       tickets: any[];

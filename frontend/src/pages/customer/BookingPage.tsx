@@ -15,7 +15,6 @@ import { toast } from 'sonner';
 import type { Trip, Ticket } from '@/types';
 import { Input } from '@/components/ui/input';
 
-// ── Danh sách điểm đón/trả cố định theo từng thành phố ──────────────
 const PICKUP_LOCATIONS: Record<string, string[]> = {
   'TP. Hồ Chí Minh': [
     'Bến xe Miền Đông (Đinh Tiên Hoàng, Q. Bình Thạnh)',
@@ -87,16 +86,15 @@ const DROPOFF_LOCATIONS: Record<string, string[]> = {
   ],
 };
 
-/** Lấy danh sách điểm đón theo tên thành phố xuất phát */
+
 function getPickupOptions(origin: string): string[] {
-  // Tìm key khớp (so sánh không phân biệt dấu)
   const key = Object.keys(PICKUP_LOCATIONS).find((k) =>
     origin?.includes(k) || k.includes(origin),
   );
   return key ? PICKUP_LOCATIONS[key] : [];
 }
 
-/** Lấy danh sách điểm trả theo tên thành phố đích */
+
 function getDropoffOptions(destination: string): string[] {
   const key = Object.keys(DROPOFF_LOCATIONS).find((k) =>
     destination?.includes(k) || k.includes(destination),
@@ -104,7 +102,6 @@ function getDropoffOptions(destination: string): string[] {
   return key ? DROPOFF_LOCATIONS[key] : [];
 }
 
-// ── Styled Select Component ──────────────────────────────────────────
 function LocationSelect({
   id,
   value,
@@ -160,7 +157,6 @@ function LocationSelect({
   );
 }
 
-// ── Main Component ───────────────────────────────────────────────────
 export function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
@@ -175,7 +171,6 @@ export function BookingPage() {
   const [countdown, setCountdown] = useState(0);
   const [paying, setPaying] = useState(false);
 
-  // Promo code state
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscountAmount, setPromoDiscountAmount] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
@@ -220,20 +215,17 @@ export function BookingPage() {
     setPromoError('');
   };
 
-  // Dynamic pricing state
   const [dynamicPrice, setDynamicPrice] = useState<DynamicPrice | null>(null);
 
   useEffect(() => {
     if (tripId) {
       tripService.getOne(Number(tripId)).then(({ data }) => setTrip(data));
-      // Load dynamic price
       tripService.getDynamicPrice(Number(tripId))
         .then(({ data }) => setDynamicPrice(data))
-        .catch(() => {}); // non-fatal
+        .catch(() => {});
     }
   }, [tripId]);
 
-  // Reset dropdowns khi chuyến đổi
   useEffect(() => {
     setPickUpLocation('');
     setDropOffLocation('');
@@ -340,7 +332,6 @@ export function BookingPage() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <h1 className="text-2xl font-bold mb-6">Đặt vé</h1>
 
-      {/* Trip info card */}
       <Card className="mb-6 border-l-4 border-l-primary">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -384,7 +375,6 @@ export function BookingPage() {
         </CardContent>
       </Card>
 
-      {/* AI Price Breakdown panel */}
       {dynamicPrice && (
         <Card className={`mb-6 ${
           hasAIPrice
@@ -401,13 +391,11 @@ export function BookingPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {/* Base price row */}
               <div className="flex items-center justify-between text-sm py-1">
                 <span className="text-muted-foreground">Giá cơ bản</span>
                 <span className="font-medium">{formatPrice(dynamicPrice.basePrice)}</span>
               </div>
 
-              {/* Active factors */}
               {dynamicPrice.factors.filter((f) => f.active).map((factor) => (
                 <div key={factor.label} className="flex items-center justify-between text-sm py-1 border-t border-orange-100">
                   <span className="flex items-center gap-1.5">
@@ -418,7 +406,6 @@ export function BookingPage() {
                 </div>
               ))}
 
-              {/* Final price row */}
               <div className="flex items-center justify-between pt-2 border-t border-orange-200">
                 <span className="font-semibold text-sm">Giá sau điều chỉnh</span>
                 <div className="flex items-center gap-2">
@@ -454,7 +441,6 @@ export function BookingPage() {
           <CardContent>
             <form onSubmit={handleBooking} className="space-y-5">
 
-              {/* Seat count */}
               <div className="space-y-2">
                 <Label htmlFor="seatCount">Số lượng vé</Label>
                 <input
@@ -477,7 +463,6 @@ export function BookingPage() {
                 />
               </div>
 
-              {/* Pickup */}
               <div className="space-y-2">
                 <Label htmlFor="pickUp">
                   <MapPin className="h-3.5 w-3.5 inline mr-1 text-green-500" />
@@ -504,7 +489,6 @@ export function BookingPage() {
                 )}
               </div>
 
-              {/* Dropoff */}
               <div className="space-y-2">
                 <Label htmlFor="dropOff">
                   <MapPin className="h-3.5 w-3.5 inline mr-1 text-red-500" />
@@ -531,7 +515,6 @@ export function BookingPage() {
                 )}
               </div>
 
-              {/* Promo code */}
               <div className="space-y-2">
                 <Label htmlFor="promoCode">
                   <Tag className="h-3.5 w-3.5 inline mr-1 text-orange-500" />

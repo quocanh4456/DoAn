@@ -41,7 +41,6 @@ export function ShiftReportPage() {
         <h1 className="text-2xl font-bold">Báo cáo ca làm việc (Hôm nay)</h1>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <Card className="shadow-sm border-0 border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -78,7 +77,6 @@ export function ShiftReportPage() {
         </Card>
       </div>
 
-      {/* Chi tiết vé */}
       <Card className="shadow-sm border">
         <CardHeader>
           <CardTitle className="text-base">Chi tiết thu tiền</CardTitle>

@@ -106,7 +106,6 @@ const promoItems = [
   },
 ];
 
-
 export function HomePage() {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
@@ -165,9 +164,7 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* ── Hero Section ────────────────────────────────── */}
       <section className="relative pt-10 pb-20 overflow-hidden">
-        {/* Background Image & Overlay */}
         <div className="absolute inset-0 z-0">
           <img src="/hero-bg.png" alt="Hero Background" className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a2463]/90 via-[#1a3a8f]/80 to-transparent" />
@@ -188,9 +185,7 @@ export function HomePage() {
             </p>
           </div>
 
-          {/* Search Box */}
           <div className="max-w-4xl mx-auto">
-            {/* Trip type tabs */}
             <div className="flex gap-1 mb-0 bg-white/10 backdrop-blur-sm w-fit rounded-t-2xl px-2 pt-2">
               {(['one-way', 'round-trip'] as const).map((type) => (
                 <button
@@ -210,7 +205,6 @@ export function HomePage() {
             <Card className="shadow-2xl border-0 rounded-tl-none rounded-2xl rounded-tr-2xl overflow-visible">
               <CardContent className="p-5 md:p-6">
                 <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3 items-end">
-                  {/* Origin */}
                   <div className="flex-1 w-full text-left">
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
@@ -245,7 +239,6 @@ export function HomePage() {
                     </div>
                   </div>
 
-                  {/* Swap button */}
                   <button
                     type="button"
                     onClick={handleSwap}
@@ -255,7 +248,6 @@ export function HomePage() {
                     <ArrowLeftRight className="h-4 w-4" />
                   </button>
 
-                  {/* Destination */}
                   <div className="flex-1 w-full text-left">
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
@@ -290,7 +282,6 @@ export function HomePage() {
                     </div>
                   </div>
 
-                  {/* Date */}
                   <div className="flex-1 w-full text-left">
                     <label className="text-xs font-semibold text-gray-500 mb-1.5 block flex items-center gap-1">
                       <CalendarDays className="h-3 w-3 text-blue-500" />
@@ -304,7 +295,6 @@ export function HomePage() {
                     />
                   </div>
 
-                  {/* Return date — only for round-trip */}
                   {tripType === 'round-trip' && (
                     <div className="flex-1 w-full text-left">
                       <label className="text-xs font-semibold text-gray-500 mb-1.5 block flex items-center gap-1">
@@ -335,7 +325,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Trust Badges ────────────────────────────────── */}
       <section className="bg-white border-b shadow-sm">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
@@ -354,7 +343,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Promo Banners ───────────────────────────────── */}
       <section className="py-10 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
@@ -381,7 +369,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Promo Detail Dialog ─────────────────────────── */}
       <Dialog open={!!selectedPromo} onOpenChange={(open) => !open && setSelectedPromo(null)}>
         <DialogContent className="sm:max-w-md">
           {selectedPromo && (
@@ -399,7 +386,6 @@ export function HomePage() {
               </DialogHeader>
 
               <div className="space-y-4 pt-2">
-                {/* Mã khuyến mãi */}
                 <div className={`flex items-center justify-between p-3 rounded-lg ${selectedPromo.accentBg} border ${selectedPromo.border}`}>
                   <div className="flex items-center gap-2">
                     <Tag className={`h-4 w-4 ${selectedPromo.accent}`} />
@@ -410,13 +396,11 @@ export function HomePage() {
                   </span>
                 </div>
 
-                {/* Hạn sử dụng */}
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <CalendarClock className="h-4 w-4 text-gray-400" />
                   <span>Hạn sử dụng: <strong className="text-gray-800">{selectedPromo.expiry}</strong></span>
                 </div>
 
-                {/* Điều kiện */}
                 <div>
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
                     <Info className="h-4 w-4 text-gray-400" />
@@ -432,7 +416,6 @@ export function HomePage() {
                   </ul>
                 </div>
 
-                {/* Nút áp dụng */}
                 <Button
                   className="w-full mt-2"
                   onClick={() => {
@@ -448,7 +431,6 @@ export function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Popular Routes ──────────────────────────────── */}
       <section className="py-14 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
@@ -511,7 +493,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Stats Section ───────────────────────────────── */}
       <section className="py-14 bg-gradient-to-br from-[#0a2463] to-[#1a3a8f]">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -528,7 +509,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Why VinaCoach ───────────────────────────────── */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -560,7 +540,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA Banner ──────────────────────────────────── */}
       <section className="py-14 bg-gradient-to-r from-orange-500 to-red-500">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">

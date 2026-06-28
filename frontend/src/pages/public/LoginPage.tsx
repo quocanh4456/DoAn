@@ -38,7 +38,6 @@ export function LoginPage() {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-muted/30">
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl border border-border/50">
 
-        {/* Left - Image */}
         <div className="relative hidden lg:block min-h-[600px]">
           <img
             src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
@@ -62,7 +61,6 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Right - Login Form */}
         <div className="flex flex-col justify-center bg-card px-8 py-12 sm:px-12 lg:px-14">
           <div className="flex justify-center lg:justify-start mb-8 lg:hidden">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-primary/70 flex items-center justify-center shadow-lg">

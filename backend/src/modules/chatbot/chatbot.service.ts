@@ -6,17 +6,16 @@ import { Trip, Route } from '../../entities';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { calculateTripBasePrice } from '../../common/utils/pricing.util';
 
-// ─── Intent detection ─────────────────────────────────────────────────────────
 type Intent =
-  | 'search_trip'   // hỏi chuyến xe cụ thể (điểm đi + điểm đến + ngày)
-  | 'list_routes'   // hỏi danh sách tuyến / giá vé
-  | 'general';      // câu hỏi chung
+  | 'search_trip'   
+  | 'list_routes'   
+  | 'general';      
 
 interface ParsedQuery {
   intent: Intent;
   origin?: string;
   destination?: string;
-  date?: string; // YYYY-MM-DD
+  date?: string; 
 }
 
 const TRIP_KEYWORDS = [
@@ -28,23 +27,17 @@ const ROUTE_KEYWORDS = ['tuyến', 'route', 'giá', 'price', 'bao nhiêu', 'danh
 function detectIntent(query: string): ParsedQuery {
   const q = query.toLowerCase();
 
-  // Check for route/price listing intent
   if (ROUTE_KEYWORDS.some((k) => q.includes(k)) && !TRIP_KEYWORDS.some((k) => q.includes(k))) {
     return { intent: 'list_routes' };
   }
 
-  // Check for trip search intent
   if (TRIP_KEYWORDS.some((k) => q.includes(k))) {
-    // Try to extract date — matches patterns like 14/5, 14-05, ngày 14, tomorrow (ngày mai)
     let date: string | undefined;
     const today = new Date();
 
     const datePatterns = [
-      // DD/MM/YYYY or DD/MM
       /(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{4}))?/,
-      // "ngày mai" → tomorrow
       /ngày mai/,
-      // "hôm nay"
       /hôm nay/,
     ];
 
@@ -70,7 +63,6 @@ function detectIntent(query: string): ParsedQuery {
   return { intent: 'general' };
 }
 
-// ─── Context formatters ───────────────────────────────────────────────────────
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 }
@@ -108,7 +100,6 @@ function formatRoutesContext(routes: Route[]): string {
   return `Danh sách tuyến đường đang hoạt động (${routes.length} tuyến):\n` + lines.join('\n');
 }
 
-// ─── Service ──────────────────────────────────────────────────────────────────
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
@@ -125,14 +116,12 @@ export class ChatbotService {
     this.difyApiKey = this.configService.get<string>('DIFY_API_KEY') || '';
   }
 
-  // ── Step 1: Fetch real data based on intent ────────────────────────────────
   private async buildContext(query: string): Promise<string> {
     const parsed = detectIntent(query);
     const today = new Date().toISOString().slice(0, 10);
 
     try {
       if (parsed.intent === 'search_trip') {
-        // Query trips: upcoming, with seats, optionally filtered by date
         const qb = this.tripsRepo
           .createQueryBuilder('trip')
           .leftJoinAndSelect('trip.schedule', 'schedule')
@@ -164,7 +153,6 @@ export class ChatbotService {
         return formatRoutesContext(routes);
       }
 
-      // General: provide a brief overview of available routes
       const routes = await this.routesRepo.find({ where: { isActive: true } });
       if (!routes.length) return '';
 
@@ -178,11 +166,9 @@ export class ChatbotService {
     }
   }
 
-  // ── Step 2: Send enriched message to Dify ─────────────────────────────────
   async sendMessage(dto: ChatMessageDto): Promise<any> {
     const { query, conversation_id, user } = dto;
 
-    // Build live data context from DB
     const dbContext = await this.buildContext(query);
 
     const systemNote = `
@@ -202,7 +188,6 @@ ${dbContext || 'Không có dữ liệu đặc biệt cho câu hỏi này.'}
 
     const payload = {
       inputs: {
-        // Pass context as a named variable — configure this in Dify app's "inputs" if needed
         context: systemNote,
       },
       query: enrichedQuery,

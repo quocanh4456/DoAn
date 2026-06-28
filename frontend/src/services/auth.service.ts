@@ -37,4 +37,4 @@ export const authService = {
   updateMyProfile: (data: { fullName: string; phone: string }) =>
     api.patch<{ message: string; fullName: string; phone: string }>('/auth/me', data),
 };
-
+

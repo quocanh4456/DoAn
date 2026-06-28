@@ -11,7 +11,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class PromotionsController {
   constructor(private promotionsService: PromotionsService) {}
 
-  /** Validate mã khuyến mãi (cần đăng nhập) */
+  
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('validate')
@@ -19,7 +19,7 @@ export class PromotionsController {
     return this.promotionsService.validate(dto.code, dto.totalAmount);
   }
 
-  /** Admin: lấy tất cả mã khuyến mãi */
+  
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Admin')

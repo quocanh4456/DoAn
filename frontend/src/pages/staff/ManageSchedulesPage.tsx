@@ -31,7 +31,6 @@ export function ManageSchedulesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ routeId: '', departureTime: '' });
 
-  // State cho chức năng sửa
   const [editOpen, setEditOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [editForm, setEditForm] = useState({ routeId: '', departureTime: '' });
@@ -70,7 +69,7 @@ export function ManageSchedulesPage() {
     setEditingSchedule(schedule);
     setEditForm({
       routeId: String(schedule.routeId),
-      departureTime: schedule.departureTime.slice(0, 5), // HH:mm
+      departureTime: schedule.departureTime.slice(0, 5),
     });
     setEditOpen(true);
   };
@@ -104,7 +103,6 @@ export function ManageSchedulesPage() {
     }
   };
 
-  // Helper: lấy tên tuyến từ ID
   const getRouteName = (routeId: string) => {
     if (routeId === 'all') return 'Tất cả tuyến';
     const r = routes.find((r) => String(r.id) === routeId);
@@ -163,7 +161,6 @@ export function ManageSchedulesPage() {
         </Dialog>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <select
           value={filterRouteId}
@@ -289,7 +286,6 @@ export function ManageSchedulesPage() {
         </Table>
       </div>
 
-      {/* Dialog sửa khung giờ */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>

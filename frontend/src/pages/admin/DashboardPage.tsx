@@ -25,7 +25,6 @@ import { toast } from 'sonner';
 import type { RevenueData, TripStat } from '@/types';
 import dayjs from 'dayjs';
 
-// ── helpers ──────────────────────────────────────────────────────────
 const fmt = (v: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
@@ -42,7 +41,6 @@ type Summary = {
   upcomingTrips: number;
 };
 
-// ── KPI Card ─────────────────────────────────────────────────────────
 function KpiCard({
   title, value, sub, icon: Icon, gradient, badge, badgeColor,
 }: {
@@ -78,7 +76,6 @@ function KpiCard({
   );
 }
 
-// ── Status breakdown mini-bar ─────────────────────────────────────────
 function StatusBar({ confirmed, pending, total }: { confirmed: number; pending: number; total: number }) {
   const cancelled = total - confirmed - pending;
   const pct = (n: number) => total > 0 ? `${Math.round((n / total) * 100)}%` : '0%';
@@ -102,7 +99,6 @@ function StatusBar({ confirmed, pending, total }: { confirmed: number; pending: 
   );
 }
 
-// ── Route occupancy table with mini bar ──────────────────────────────
 function OccupancyRow({ t }: { t: TripStat }) {
   const pct = t.totalSeats > 0 ? Math.round((t.passengerCount / t.totalSeats) * 100) : 0;
   const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
@@ -137,8 +133,6 @@ function OccupancyRow({ t }: { t: TripStat }) {
   );
 }
 
-
-// ── MAIN COMPONENT ────────────────────────────────────────────────────
 export function DashboardPage() {
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [to, setTo]     = useState(dayjs().format('YYYY-MM-DD'));
@@ -154,7 +148,6 @@ export function DashboardPage() {
   const [showAllTrips, setShowAllTrips]     = useState(false);
   const [activeTab, setActiveTab]           = useState<'report' | 'ai'>('report');
 
-  // AI state
   const [forecast, setForecast]           = useState<ForecastResult | null>(null);
   const [routeInsights, setRouteInsights]  = useState<RouteInsight[]>([]);
   const [forecastDays, setForecastDays]   = useState<7 | 14 | 30>(14);
@@ -164,7 +157,6 @@ export function DashboardPage() {
   const [loadingAI, setLoadingAI]         = useState(false);
   const [aiLoaded, setAiLoaded]           = useState(false);
 
-  // Load KPI summary on mount
   useEffect(() => {
     reportService.getSummary()
       .then(({ data }) => setSummary(data))
@@ -192,10 +184,8 @@ export function DashboardPage() {
     }
   }, [from, to]);
 
-  // Also auto-load report for current month on mount
-  useEffect(() => { fetchReport(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchReport(); }, []);
 
-  // Load AI forecast on mount
   const fetchAI = useCallback(async (days: 7 | 14 | 30 = forecastDays) => {
     setLoadingAI(true);
     try {
@@ -217,11 +207,10 @@ export function DashboardPage() {
     }
   }, [forecastDays]);
 
-  useEffect(() => { fetchAI(14); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchAI(14); }, []);
 
   const totalPassengers = tripStats.reduce((s, t) => s + t.passengerCount, 0);
 
-  // Sắp xếp: chuyến có người đặt lên trước, sau đó theo số vé giảm dần
   const sortedTripStats = [...tripStats].sort((a, b) => {
     if (b.ticketCount !== a.ticketCount) return b.ticketCount - a.ticketCount;
     return b.passengerCount - a.passengerCount;
@@ -240,7 +229,6 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
 
-      {/* ── Page header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
@@ -265,7 +253,6 @@ export function DashboardPage() {
         </Button>
       </div>
 
-      {/* ── Tab Navigation ── */}
       <div className="flex gap-1 bg-muted/60 rounded-xl p-1 w-fit border">
         {([
           { key: 'report', label: 'Báo cáo', icon: BarChart3 },
@@ -292,7 +279,6 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* ── KPI Cards (always visible) ── */}
       {loadingSummary ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -335,7 +321,6 @@ export function DashboardPage() {
             />
           </div>
 
-          {/* ── Status breakdown + Pie ── */}
           <div className="grid md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-3">
@@ -383,10 +368,8 @@ export function DashboardPage() {
         </>
       )}
 
-      {/* ══════════ TAB: BÁO CÁO ══════════ */}
       {activeTab === 'report' && (<>
 
-      {/* ── Date range filter ── */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-end gap-4 flex-wrap">
@@ -402,7 +385,6 @@ export function DashboardPage() {
               <Search className="h-3.5 w-3.5" />
               {loadingReport ? 'Đang tải...' : 'Xem báo cáo'}
             </Button>
-            {/* Quick filters */}
             {[
               { label: 'Tháng này', from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') },
               { label: '7 ngày qua', from: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), to: dayjs().format('YYYY-MM-DD') },
@@ -412,7 +394,6 @@ export function DashboardPage() {
                 onClick={() => {
                   setFrom(q.from);
                   setTo(q.to);
-                  // Load báo cáo ngay với khoảng thời gian mới
                   setLoadingReport(true);
                   Promise.all([
                     reportService.getRevenue(q.from, q.to),
@@ -440,10 +421,8 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* ── Report sections ── */}
       {loaded && (
         <>
-          {/* Revenue summary row */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Card className="border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -465,9 +444,7 @@ export function DashboardPage() {
             </Card>
           </div>
 
-          {/* Charts row */}
           <div className="grid md:grid-cols-3 gap-4">
-            {/* Revenue area chart */}
             <Card className="md:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -499,7 +476,6 @@ export function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Route revenue bar chart */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -527,7 +503,6 @@ export function DashboardPage() {
             </Card>
           </div>
 
-          {/* Trip stats table */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -579,7 +554,6 @@ export function DashboardPage() {
       {activeTab === 'ai' && (
       <>
       <div className="mt-2">
-        {/* Section header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
@@ -591,7 +565,6 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Forecast day selector */}
             <div className="flex gap-1 bg-muted rounded-lg p-1">
               {([7, 14, 30] as const).map((d) => (
                 <button
@@ -632,9 +605,7 @@ export function DashboardPage() {
           </div>
         ) : aiLoaded && forecast ? (
           <>
-            {/* AI KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              {/* Xu hướng */}
               <Card className="border-0 bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -654,7 +625,6 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Tốc độ tăng trưởng */}
               <Card className="border-0 bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -671,7 +641,6 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Dự báo tổng */}
               <Card className="border-0 bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -686,7 +655,6 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Slope */}
               <Card className="border-0 bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -703,7 +671,6 @@ export function DashboardPage() {
               </Card>
             </div>
 
-            {/* Forecast Chart */}
             <Card className="mb-4 border border-purple-100">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -719,7 +686,7 @@ export function DashboardPage() {
                   const todayStr = dayjs().format('YYYY-MM-DD');
                   const chartData = [
                     ...forecast.historical.map((d) => ({
-                      date: d.date.slice(5),   // MM-DD
+                      date: d.date.slice(5),
                       actual: d.revenue,
                       predicted: undefined as number | undefined,
                       isForecast: false,
@@ -778,7 +745,6 @@ export function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Route Insights Table */}
             {routeInsights.length > 0 && (
               <Card className="border border-purple-100">
                 <CardHeader className="pb-2">
@@ -838,7 +804,6 @@ export function DashboardPage() {
         ) : null}
       </div>
 
-        {/* ── Low-Demand Alerts ── */}
         <Card className={`border-l-4 ${lowDemandAlerts.length > 0 ? 'border-l-red-400' : 'border-l-green-400'}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -936,7 +901,6 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* ── RFM Customer Segmentation ── */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -955,7 +919,6 @@ export function DashboardPage() {
               <div className="h-40 animate-pulse bg-muted rounded-lg" />
             ) : rfmData ? (
               <div className="space-y-5">
-                {/* Segment summary cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'VIP', count: rfmData.summary.vip,       icon: Crown, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200' },
@@ -973,7 +936,6 @@ export function DashboardPage() {
                   ))}
                 </div>
 
-                {/* RFM Table */}
                 <div className="rounded-xl border overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -1042,8 +1004,6 @@ export function DashboardPage() {
   );
 }
 
-
-// ── AI Recommendation Badge ───────────────────────────────────────────
 function RecommendationBadge({ color, label }: { color: 'green' | 'orange' | 'red'; label: string }) {
   const styles = {
     green: 'bg-green-100 text-green-700 border-green-200',

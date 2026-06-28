@@ -10,16 +10,12 @@ export class PromotionsService {
     private promosRepo: Repository<Promotion>,
   ) {}
 
-  /** Lấy tất cả mã khuyến mãi (Admin) */
+  
   async findAll() {
     return this.promosRepo.find({ order: { createdAt: 'DESC' } });
   }
 
-  /**
-   * Validate mã khuyến mãi và trả về thông tin giảm giá.
-   * @param code   Mã KM
-   * @param totalAmount Tổng tiền trước giảm
-   */
+  
   async validate(code: string, totalAmount: number) {
     const promo = await this.promosRepo.findOne({
       where: { code: code.toUpperCase() },
@@ -46,10 +42,8 @@ export class PromotionsService {
       throw new BadRequestException('Mã khuyến mãi đã hết lượt sử dụng.');
     }
 
-    // Tính số tiền giảm
     let discountAmount = Math.round(totalAmount * promo.discountPercent / 100);
 
-    // Giới hạn giảm tối đa
     if (Number(promo.maxDiscount) > 0 && discountAmount > Number(promo.maxDiscount)) {
       discountAmount = Number(promo.maxDiscount);
     }
@@ -65,9 +59,7 @@ export class PromotionsService {
     };
   }
 
-  /**
-   * Tăng used_count khi vé được tạo thành công với mã KM.
-   */
+  
   async incrementUsage(code: string) {
     await this.promosRepo.increment({ code: code.toUpperCase() }, 'usedCount', 1);
   }

@@ -27,7 +27,6 @@ export class SchedulesService {
   }
 
   async create(dto: CreateScheduleDto) {
-    // Kiểm tra trùng lặp khung giờ trên cùng tuyến đường
     const existing = await this.schedulesRepo.findOne({
       where: {
         routeId: dto.routeId,
@@ -48,7 +47,6 @@ export class SchedulesService {
   async update(id: number, dto: UpdateScheduleDto) {
     const schedule = await this.findOne(id);
 
-    // Kiểm tra trùng lặp khung giờ (loại trừ chính nó)
     const routeId = dto.routeId ?? schedule.routeId;
     const departureTime = dto.departureTime ?? schedule.departureTime;
     const existing = await this.schedulesRepo.findOne({

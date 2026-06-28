@@ -44,11 +44,11 @@ export const tripService = {
   remove: (id: number, cancelReason: string) =>
     api.delete(`/trips/${id}`, { data: { cancelReason } }),
 
-  /** Áp dụng giảm giá cho chuyến xe */
+  
   applyDiscount: (id: number, discountPercent: number) =>
     api.patch<Trip>(`/trips/${id}/discount`, { discountPercent }),
 
-  /** AI: Lấy giá vé động cho một chuyến xe */
+  
   getDynamicPrice: (id: number) =>
     api.get<DynamicPrice>(`/trips/${id}/dynamic-price`),
 };

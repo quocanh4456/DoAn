@@ -51,7 +51,7 @@ export function ManageTicketsPage() {
 
   const handleCancelTicket = async (id: number) => {
     const reason = window.prompt('Nhập lý do hủy vé (bắt buộc):');
-    if (reason === null) return; // User clicked Cancel
+    if (reason === null) return; 
     if (!reason.trim()) {
       toast.error('Vui lòng nhập lý do hủy vé');
       return;
@@ -183,7 +183,6 @@ export function ManageTicketsPage() {
         </div>
       </div>
 
-      {/* Ticket Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -195,7 +194,6 @@ export function ManageTicketsPage() {
 
           {selectedTicket && (
             <div className="space-y-4 py-2">
-              {/* Status & Price */}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
                 <div>
                   <div className="text-xs text-slate-500 mb-1 font-semibold uppercase">Tổng tiền</div>
@@ -210,7 +208,6 @@ export function ManageTicketsPage() {
                 </div>
               </div>
 
-              {/* Cancellation Reason if any */}
               {selectedTicket.status === 'CANCELLED' && selectedTicket.cancelReason && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
                   <span className="font-semibold block mb-1">Lý do hủy:</span>
@@ -218,7 +215,6 @@ export function ManageTicketsPage() {
                 </div>
               )}
 
-              {/* Customer Info */}
               <div>
                 <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                   <User className="h-4 w-4 text-blue-500" /> Thông tin khách hàng
@@ -243,7 +239,6 @@ export function ManageTicketsPage() {
                 </div>
               </div>
 
-              {/* Trip Info */}
               <div>
                 <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                   <Bus className="h-4 w-4 text-orange-500" /> Thông tin chuyến đi
@@ -272,7 +267,6 @@ export function ManageTicketsPage() {
                 </div>
               </div>
 
-              {/* Location Info */}
               <div>
                 <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-green-500" /> Điểm đón / trả

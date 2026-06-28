@@ -67,6 +67,7 @@ export interface Ticket {
   user?: User;
   expiresIn?: number;
   guestName?: string;
+  guestPhone?: string;
   guestEmail?: string;
   cancelReason?: string;
   promoCode?: string;

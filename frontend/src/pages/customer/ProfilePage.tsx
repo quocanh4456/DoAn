@@ -65,7 +65,6 @@ export function ProfilePage() {
     try {
       const { data } = await authService.updateMyProfile({ fullName, phone });
       setProfile((p) => p ? { ...p, fullName: data.fullName, phone: data.phone } : p);
-      // Cập nhật store để header hiển thị tên mới
       if (storeUser) {
         login({ ...storeUser, fullName: data.fullName }, localStorage.getItem('accessToken') || '', localStorage.getItem('refreshToken') || '');
       }
@@ -111,7 +110,6 @@ export function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 space-y-5">
 
-      {/* ── Avatar / Header card ─────────────────────────────── */}
       <Card className="border-0 shadow-xl overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-[#1a3a8f] to-[#2a5bd7]" />
         <CardContent className="pt-0 pb-6">
@@ -136,7 +134,6 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* ── Thông tin chi tiết ───────────────────────────────── */}
       <Card className="border-0 shadow-xl">
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
@@ -239,7 +236,6 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* ── Bảo mật ─────────────────────────────────────────── */}
       <Card className="border-0 shadow-xl">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">

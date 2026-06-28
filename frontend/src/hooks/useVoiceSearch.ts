@@ -1,5 +1,47 @@
 import { useState, useRef, useCallback } from 'react';
 
+// Web Speech API type declarations (experimental API, not in default TS lib)
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  continuous: boolean;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  readonly isFinal: boolean;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}
+
 export type VoiceTarget = 'origin' | 'destination' | null;
 
 interface UseVoiceSearchOptions {
@@ -40,7 +82,6 @@ export function useVoiceSearch({ onResult, onError }: UseVoiceSearchOptions): Us
         return;
       }
 
-      // Stop any ongoing recognition first
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current = null;
@@ -64,7 +105,6 @@ export function useVoiceSearch({ onResult, onError }: UseVoiceSearchOptions): Us
         const results = event.results[0];
         let transcript = results[0].transcript.trim();
 
-        // Normalize common Vietnamese city name pronunciations
         transcript = normalizeVietnameseLocation(transcript);
 
         onResult(transcript, target);
@@ -109,9 +149,7 @@ export function useVoiceSearch({ onResult, onError }: UseVoiceSearchOptions): Us
   return { isListening, activeTarget, isSupported, startListening, stopListening };
 }
 
-/**
- * Normalize common mispronunciations / abbreviations for Vietnamese city names.
- */
+
 function normalizeVietnameseLocation(text: string): string {
   const map: Record<string, string> = {
     'thành phố hồ chí minh': 'TP. Hồ Chí Minh',
@@ -163,7 +201,6 @@ function normalizeVietnameseLocation(text: string): string {
     }
   }
 
-  // Capitalize first letter of each word as fallback
   return text
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

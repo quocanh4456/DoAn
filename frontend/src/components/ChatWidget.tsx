@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Bot, X, Send, Minimize2, Loader2, MessageCircle, ChevronDown, Sparkles } from 'lucide-react';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -10,7 +9,6 @@ interface Message {
   timestamp: Date;
 }
 
-// ─── API helper ───────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 async function sendChatMessage(
@@ -25,20 +23,13 @@ async function sendChatMessage(
   return data;
 }
 
-// ─── Markdown renderer (lightweight, no dependency) ──────────────────────────
 function renderMarkdown(text: string): string {
   return text
-    // Horizontal rule
     .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">')
-    // Bold **text**
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic *text* (single, not bullet)
     .replace(/(?<!^\s*)\*(?!\s)(.+?)(?<!\s)\*/g, '<em>$1</em>')
-    // Bullet list: lines starting with "* "
     .replace(/^\* (.+)$/gm, '<li>$1</li>')
-    // Wrap consecutive <li> in <ul>
     .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul style="margin:6px 0 6px 16px;padding:0;list-style:disc">${m}</ul>`)
-    // Line breaks
     .replace(/\n/g, '<br>');
 }
 
@@ -52,7 +43,6 @@ function MarkdownContent({ text, isUser }: { text: string; isUser: boolean }) {
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
 function TypingIndicator() {
   return (
     <div className="vinabot-bubble vinabot-bubble--assistant">
@@ -84,7 +74,6 @@ function MessageBubble({ msg }: { msg: Message }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -104,14 +93,12 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     if (isOpen && !isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen, isMinimized]);
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen && !isMinimized) {
       setTimeout(() => inputRef.current?.focus(), 150);
@@ -152,7 +139,6 @@ export function ChatWidget() {
       };
       setMessages((prev) => [...prev, botMsg]);
 
-      // Increment unread if minimized/closed
       if (isMinimized || !isOpen) {
         setUnreadCount((c) => c + 1);
       }
@@ -184,7 +170,6 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* ── Styles ── */}
       <style>{`
         /* Layout */
         .vinabot-fab {
@@ -517,16 +502,13 @@ export function ChatWidget() {
         }
       `}</style>
 
-      {/* ── FAB Container ── */}
       <div className="vinabot-fab" role="region" aria-label="Trợ lý ảo VinaCoach">
-        {/* Chat Panel */}
         <div
           className={`vinabot-panel ${
             isOpen && !isMinimized ? 'vinabot-panel--open' : 'vinabot-panel--closed'
           }`}
           aria-hidden={!isOpen || isMinimized}
         >
-          {/* Header */}
           <div className="vinabot-header">
             <div className="vinabot-header-avatar">
               <Bot size={18} />
@@ -561,7 +543,6 @@ export function ChatWidget() {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="vinabot-messages" role="log" aria-live="polite">
             {messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} />
@@ -570,7 +551,6 @@ export function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick questions */}
           {messages.length <= 1 && !isLoading && (
             <div className="vinabot-quick">
               {quickQuestions.map((q) => (
@@ -588,7 +568,6 @@ export function ChatWidget() {
             </div>
           )}
 
-          {/* Input */}
           <div className="vinabot-input-area">
             <textarea
               ref={inputRef}
@@ -613,7 +592,6 @@ export function ChatWidget() {
           <div className="vinabot-footer">Powered by Dify · Gemini AI</div>
         </div>
 
-        {/* FAB Toggle Button */}
         <button
           className="vinabot-toggle"
           onClick={isOpen && !isMinimized ? () => setIsMinimized(true) : handleOpen}

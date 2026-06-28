@@ -37,19 +37,18 @@ export class AuthController {
     return user;
   }
 
-  /** Quên mật khẩu — gửi email reset link */
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
-  /** Đặt lại mật khẩu bằng token từ email */
+
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
-  /** Đổi mật khẩu (yêu cầu đăng nhập) */
+  
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('change-password')
@@ -57,7 +56,7 @@ export class AuthController {
     return this.authService.changePassword(req.user.id, dto);
   }
 
-  /** Xem thông tin cá nhân */
+  
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -65,7 +64,7 @@ export class AuthController {
     return this.authService.getMyProfile(req.user.id);
   }
 
-  /** Cập nhật thông tin cá nhân */
+  
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('me')

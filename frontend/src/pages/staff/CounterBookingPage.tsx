@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import type { Trip } from '@/types';
 import dayjs from 'dayjs';
 
-// ── Danh sách điểm đón/trả cố định theo từng thành phố ──────────────
 const PICKUP_LOCATIONS: Record<string, string[]> = {
   'TP. Hồ Chí Minh': [
     'Bến xe Miền Đông (Đinh Tiên Hoàng, Q. Bình Thạnh)',
@@ -177,7 +176,6 @@ export function CounterBookingPage() {
   const uniqueOrigins = Array.from(new Set(routes.map(r => r.origin)));
   const uniqueDestinations = Array.from(new Set(routes.map(r => r.destination)));
 
-  // Reset dropdowns when trip changes
   useEffect(() => {
     setPickUp('');
     setDropOff('');
@@ -333,7 +331,6 @@ export function CounterBookingPage() {
                     />
                   </div>
 
-                  {/* Guest info */}
                   <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '16px', marginBottom: '4px' }}>
                     <div className="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-1">
                       <User className="h-3.5 w-3.5" />

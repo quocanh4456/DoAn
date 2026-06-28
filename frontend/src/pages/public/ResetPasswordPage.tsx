@@ -98,7 +98,6 @@ export function ResetPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Mật khẩu mới */}
               <div className="space-y-2">
                 <Label htmlFor="new-password">Mật khẩu mới</Label>
                 <div className="relative">
@@ -123,7 +122,6 @@ export function ResetPasswordPage() {
                 </div>
               </div>
 
-              {/* Xác nhận mật khẩu */}
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Xác nhận mật khẩu</Label>
                 <div className="relative">

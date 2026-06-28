@@ -17,11 +17,7 @@ export class TripsService {
     @InjectRepository(Schedule) private schedulesRepo: Repository<Schedule>,
   ) {}
 
-  /**
-   * Kiểm tra xung đột xe và tài xế.
-   * Cùng ngày + cùng khung giờ (departureTime) = xung đột.
-   * @param excludeTripId - ID chuyến đi cần loại trừ (dùng khi update)
-   */
+  
   private async checkConflicts(
     scheduleId: number,
     busId: number,
@@ -29,7 +25,6 @@ export class TripsService {
     departureDate: string,
     excludeTripId?: number,
   ) {
-    // Lấy thông tin schedule để biết departureTime
     const schedule = await this.schedulesRepo.findOne({
       where: { id: scheduleId },
       relations: ['route'],
@@ -38,7 +33,6 @@ export class TripsService {
 
     const departureTime = schedule.departureTime;
 
-    // --- Kiểm tra xung đột phương tiện ---
     const busConflictQb = this.tripsRepo
       .createQueryBuilder('trip')
       .leftJoinAndSelect('trip.schedule', 'schedule')
@@ -63,7 +57,6 @@ export class TripsService {
       );
     }
 
-    // --- Kiểm tra xung đột tài xế ---
     const driverConflictQb = this.tripsRepo
       .createQueryBuilder('trip')
       .leftJoinAndSelect('trip.schedule', 'schedule')
@@ -91,7 +84,6 @@ export class TripsService {
       .leftJoinAndSelect('schedule.route', 'route')
       .leftJoinAndSelect('trip.bus', 'bus')
       .where('trip.status = :status', { status: 'SCHEDULED' })
-      // Only show upcoming trips for customer search.
       .andWhere(
         '(trip.departureDate > CURDATE() OR (trip.departureDate = CURDATE() AND schedule.departureTime >= CURTIME()))',
       );
@@ -118,7 +110,6 @@ export class TripsService {
           Number(trip.schedule.route.basePrice),
           trip.departureDate,
         );
-        // Áp dụng giảm giá nếu có
         if (trip.discountPercent > 0) {
           adjustedPrice = Math.round(adjustedPrice * (100 - trip.discountPercent) / 100 / 1000) * 1000;
         }
@@ -172,7 +163,6 @@ export class TripsService {
 
     const scheduleId = await this.resolveScheduleId(dto);
 
-    // Kiểm tra xung đột xe và tài xế
     await this.checkConflicts(scheduleId, dto.busId, dto.driverName, dto.departureDate);
 
     const { routeId, departureTime, ...tripData } = dto;
@@ -205,7 +195,6 @@ export class TripsService {
     const driverName = dto.driverName ?? trip.driverName;
     const departureDate = dto.departureDate ?? trip.departureDate;
 
-    // Kiểm tra xung đột xe và tài xế (loại trừ chính nó)
     await this.checkConflicts(scheduleId, busId, driverName, departureDate, id);
 
     const { routeId, departureTime, ...tripData } = dto;
@@ -230,7 +219,7 @@ export class TripsService {
     return this.tripsRepo.save(trip);
   }
 
-  /** Tính giá động cho một chuyến xe cụ thể */
+  
   async getDynamicPrice(id: number) {
     const trip = await this.tripsRepo.findOne({
       where: { id },
@@ -261,17 +250,11 @@ export class TripsService {
     };
   }
 
-  /**
-   * Auto-dispatch & auto-complete trips:
-   * Chạy mỗi phút:
-   * 1. SCHEDULED → IN_PROGRESS: khi đến giờ khởi hành.
-   * 2. IN_PROGRESS → COMPLETED: khi đã qua thời gian di chuyển ước tính (distance / 60 km/h).
-   */
+  
   @Cron(CronExpression.EVERY_MINUTE)
   async autoDispatchTrips() {
     const now = new Date();
     
-    // === 1. SCHEDULED → IN_PROGRESS ===
     const scheduledTrips = await this.tripsRepo.find({
       where: { status: 'SCHEDULED' },
       relations: ['schedule'],
@@ -291,7 +274,6 @@ export class TripsService {
       }
     }
 
-    // === 2. IN_PROGRESS → COMPLETED ===
     const inProgressTrips = await this.tripsRepo.find({
       where: { status: 'IN_PROGRESS' },
       relations: ['schedule', 'schedule.route'],
@@ -304,7 +286,6 @@ export class TripsService {
       const [h, m, s] = trip.schedule.departureTime.split(':').map(Number);
       departureDate.setHours(h, m, s || 0, 0);
 
-      // Ước tính thời gian di chuyển dựa trên khoảng cách (tốc độ trung bình 60 km/h), tối thiểu 1 giờ
       const distanceKm = trip.schedule.route?.distance || 100;
       const estimatedHours = Math.max(distanceKm / 60, 1);
       const estimatedArrival = new Date(departureDate.getTime() + estimatedHours * 60 * 60 * 1000);

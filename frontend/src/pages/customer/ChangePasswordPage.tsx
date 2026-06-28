@@ -82,7 +82,6 @@ export function ChangePasswordPage() {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Mật khẩu hiện tại */}
             <div className="space-y-2">
               <Label htmlFor="old-password">Mật khẩu hiện tại</Label>
               <div className="relative">
@@ -101,7 +100,6 @@ export function ChangePasswordPage() {
             </div>
 
             <div className="border-t pt-4 space-y-4">
-              {/* Mật khẩu mới */}
               <div className="space-y-2">
                 <Label htmlFor="new-password">Mật khẩu mới</Label>
                 <div className="relative">
@@ -120,7 +118,6 @@ export function ChangePasswordPage() {
                 </div>
               </div>
 
-              {/* Xác nhận mật khẩu mới */}
               <div className="space-y-2">
                 <Label htmlFor="confirm-new-password">Xác nhận mật khẩu mới</Label>
                 <div className="relative">
@@ -158,7 +155,6 @@ export function ChangePasswordPage() {
             </Button>
           </form>
 
-          {/* Gợi ý bảo mật */}
           <div className="mt-5 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
             <p className="font-medium text-foreground">Gợi ý mật khẩu an toàn:</p>
             <ul className="list-disc list-inside space-y-0.5 text-xs">

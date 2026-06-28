@@ -297,7 +297,6 @@ export class EmailService {
       });
       this.logger.log(`Email xác nhận vé #${ticket.id} đã gửi tới ${to}`);
     } catch (err) {
-      // Non-fatal: log error but don't throw
       this.logger.error(`Không thể gửi email xác nhận vé #${ticket.id}: ${err}`);
     }
   }
@@ -496,7 +495,6 @@ export class EmailService {
   }
 }
 
-/** Helper: render 1 ô thông tin */
 function infoCell(icon: string, label: string, value: string): string {
   return `
     <div style="background:#f8faff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;">

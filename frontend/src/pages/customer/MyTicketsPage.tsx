@@ -227,7 +227,6 @@ export function MyTicketsPage() {
                         {t.dropOffLocation}
                       </div>
                     </div>
-                    {/* Right side: price + status + actions */}
                     <div className="flex flex-col items-end gap-2 relative z-10 shrink-0">
                       <div className="text-lg font-bold text-primary">
                         {formatPrice(Number(t.totalPrice))}
@@ -272,7 +271,6 @@ export function MyTicketsPage() {
         </div>
       )}
 
-      {/* ── Ticket Detail Modal ────────────────────────── */}
       {selectedTicket && (
         <TicketDetailModal
           ticket={selectedTicket}
@@ -315,7 +313,6 @@ function TicketDetailModal({
   const st = statusMap[t.status] || statusMap.PENDING;
   const StatusIcon = st.icon;
 
-  // Close on ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -324,7 +321,6 @@ function TicketDetailModal({
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Prevent background scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -337,16 +333,13 @@ function TicketDetailModal({
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
-      {/* Modal */}
       <div
         className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: '90vh' }}
       >
-        {/* Header with gradient */}
         <div className="relative bg-gradient-to-r from-[#1a3a8f] to-[#2a5bd7] text-white p-6">
           <button
             onClick={onClose}
@@ -355,7 +348,6 @@ function TicketDetailModal({
             <X className="h-4 w-4" />
           </button>
 
-          {/* Title row */}
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
               <Ticket className="h-5 w-5" />
@@ -364,7 +356,6 @@ function TicketDetailModal({
               <h2 className="text-xl font-bold">Chi tiết vé xe</h2>
               <p className="text-white/70 text-sm">Mã vé: #{t.id}</p>
             </div>
-            {/* Status badge – lives in header, top-right area below close btn */}
             <div
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold mr-8"
               style={{
@@ -378,7 +369,6 @@ function TicketDetailModal({
             </div>
           </div>
 
-          {/* Route display */}
           <div className="bg-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
             <div className="flex-1 text-right">
               <p className="text-base font-bold leading-tight">
@@ -411,9 +401,7 @@ function TicketDetailModal({
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 250px)' }}>
-          {/* Info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <InfoItem
               icon={Calendar}
@@ -459,7 +447,6 @@ function TicketDetailModal({
             />
           </div>
 
-          {/* Pick-up / Drop-off */}
           <div className="bg-gray-50 rounded-xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -492,7 +479,6 @@ function TicketDetailModal({
             </div>
           </div>
 
-          {/* Price & booking time */}
           <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -519,7 +505,6 @@ function TicketDetailModal({
             </div>
           </div>
 
-          {/* Actions */}
           {t.status === 'PENDING' && (
             <div className="flex gap-3">
               <button

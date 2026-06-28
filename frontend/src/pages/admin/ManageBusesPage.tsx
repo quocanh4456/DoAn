@@ -134,11 +134,9 @@ export function ManageBusesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quản lý phương tiện</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Thêm xe
-            </Button>
+          <DialogTrigger render={<Button onClick={openCreate} />}>
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm xe
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -212,7 +210,6 @@ export function ManageBusesPage() {
         </Dialog>
       </div>
 
-      {/* Filter bar */}
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <form onSubmit={handleSearch} className="flex gap-2">
           <Input

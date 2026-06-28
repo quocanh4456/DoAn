@@ -20,7 +20,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { EmailService } from '../email/email.service';
 
-/** In-memory token store: token → { userId, expiresAt } */
+
 interface ResetEntry {
   userId: number;
   expiresAt: number;
@@ -103,19 +103,16 @@ export class AuthService {
     }
   }
 
-  // ─── Quên mật khẩu ───────────────────────────────────────────────────────────
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.usersRepo.findOne({ where: { email: dto.email } });
 
-    // Luôn trả về thành công để không lộ email tồn tại hay không
     if (!user || !user.isActive) {
       return { message: 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.' };
     }
 
-    // Tạo token ngẫu nhiên, lưu vào store 15 phút
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 phút
+    const expiresAt = Date.now() + 15 * 60 * 1000;
     this.resetTokens.set(token, { userId: user.id, expiresAt });
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
@@ -126,7 +123,6 @@ export class AuthService {
     return { message: 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.' };
   }
 
-  // ─── Đặt lại mật khẩu ────────────────────────────────────────────────────────
 
   async resetPassword(dto: ResetPasswordDto) {
     const entry = this.resetTokens.get(dto.token);
@@ -145,13 +141,11 @@ export class AuthService {
     user.password = await bcrypt.hash(dto.newPassword, 10);
     await this.usersRepo.save(user);
 
-    // Xóa token sau khi dùng (one-time use)
     this.resetTokens.delete(dto.token);
 
     return { message: 'Đặt lại mật khẩu thành công' };
   }
 
-  // ─── Đổi mật khẩu (đã đăng nhập) ────────────────────────────────────────────
 
   async changePassword(userId: number, dto: ChangePasswordDto) {
     const user = await this.usersRepo.findOne({
@@ -175,7 +169,6 @@ export class AuthService {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
-  // ─── Xem & Sửa thông tin cá nhân ────────────────────────────────────────────
 
   async getMyProfile(userId: number) {
     const user = await this.usersRepo.findOne({
@@ -183,7 +176,6 @@ export class AuthService {
       relations: ['role'],
     });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
-    // Không trả về password
     const { password, ...safe } = user as any;
     return safe;
   }
@@ -198,8 +190,6 @@ export class AuthService {
 
     return { message: 'Cập nhật thông tin thành công', fullName: user.fullName, phone: user.phone };
   }
-
-  // ─── Helper ──────────────────────────────────────────────────────────────────
 
 
   private generateTokens(user: User) {

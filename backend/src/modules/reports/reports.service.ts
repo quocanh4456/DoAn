@@ -13,7 +13,7 @@ export class ReportsService {
     @InjectRepository(User) private usersRepo: Repository<User>,
   ) {}
 
-  /** KPI tổng quan — không cần chọn ngày, load ngay khi vào dashboard */
+  
   async getSummary() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const todayStart = `${todayStr} 00:00:00`;
@@ -56,8 +56,6 @@ export class ReportsService {
     const todayStart = `${todayStr} 00:00:00`;
     const todayEnd = `${todayStr} 23:59:59`;
 
-    // Lấy các vé do nhân viên này bán trong ngày hôm nay (dựa vào ticket.user_id = staffId nếu mua tại quầy)
-    // Và các vé có payment method = 'CASH' (thu tiền mặt trực tiếp)
     const tickets = await this.ticketsRepo.createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.trip', 'trip')
       .leftJoinAndSelect('trip.schedule', 'schedule')
@@ -67,7 +65,6 @@ export class ReportsService {
       .where('payment.paymentMethod = :method', { method: 'CASH' })
       .andWhere('payment.status = :status', { status: 'SUCCESS' })
       .andWhere('payment.paidAt BETWEEN :from AND :to', { from: todayStart, to: todayEnd })
-      // Cần chắc chắn rằng staffId thu tiền (với description chứa ID của staff)
       .andWhere('payment.description LIKE :desc', { desc: `%Nhân viên ID: ${staffId}%` })
       .orderBy('payment.paidAt', 'DESC')
       .getMany();
@@ -105,8 +102,6 @@ export class ReportsService {
   }
 
   async getTripStats(from: string, to: string) {
-    // ── Bước 1: Lấy trip IDs có vé CONFIRMED được đặt trong kỳ báo cáo ──
-    // (dùng JOIN thay OR EXISTS cho hiệu năng tốt hơn)
     const tripIdsWithActivity = await this.ticketsRepo
       .createQueryBuilder('tk')
       .select('DISTINCT tk.trip_id', 'tripId')
@@ -119,8 +114,6 @@ export class ReportsService {
 
     const activityTripIds = tripIdsWithActivity.map((r) => Number(r.tripId));
 
-    // ── Bước 2: Lấy thống kê chuyến xe ──
-    // Điều kiện: ngày khởi hành nằm trong kỳ HOẶC có vé đặt trong kỳ
     const qb = this.tripsRepo
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.schedule', 's')
@@ -184,16 +177,8 @@ export class ReportsService {
     return result;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // AI FEATURE 1: Dự báo Doanh thu
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Lấy doanh thu 90 ngày qua, áp dụng Weighted Moving Average + Linear
-   * Regression để dự báo `forecastDays` ngày tới.
-   */
   async getForecast(forecastDays: number = 14) {
-    // Lấy dữ liệu 90 ngày gần nhất
     const today = new Date();
     const fromDate = new Date(today);
     fromDate.setDate(today.getDate() - 89);
@@ -213,8 +198,6 @@ export class ReportsService {
       .orderBy('payment_date', 'ASC')
       .getRawMany();
 
-    // Điền 0 cho những ngày không có giao dịch (fill gaps)
-    // DATE_FORMAT trả về chuỗi YYYY-MM-DD trực tiếp từ MySQL
     const revenueMap: Record<string, number> = {};
     raw.forEach((r) => {
       const dateKey = String(r.payment_date).slice(0, 10);
@@ -229,21 +212,19 @@ export class ReportsService {
       historical.push({ date: dateStr, revenue: revenueMap[dateStr] ?? 0 });
     }
 
-    // Weighted Moving Average (WMA) với window = 7
     const WINDOW = 7;
     const wmaValues: number[] = historical.map((_, idx) => {
       if (idx < WINDOW - 1) return historical[idx].revenue;
       let weightedSum = 0;
       let totalWeight = 0;
       for (let w = 0; w < WINDOW; w++) {
-        const weight = w + 1; // trọng số tăng dần (ngày gần nhất có trọng số cao)
+        const weight = w + 1;
         weightedSum += historical[idx - (WINDOW - 1 - w)].revenue * weight;
         totalWeight += weight;
       }
       return weightedSum / totalWeight;
     });
 
-    // Linear Regression trên WMA để tìm trend (slope)
     const n = wmaValues.length;
     const xMean = (n - 1) / 2;
     const yMean = wmaValues.reduce((s, v) => s + v, 0) / n;
@@ -256,22 +237,18 @@ export class ReportsService {
     const slope = denominator !== 0 ? numerator / denominator : 0;
     const lastWma = wmaValues[wmaValues.length - 1];
 
-    // Tính tốc độ tăng trưởng: so sánh 30 ngày cuối vs 30 ngày trước đó
     const last30 = historical.slice(-30).reduce((s, d) => s + d.revenue, 0);
     const prev30 = historical.slice(-60, -30).reduce((s, d) => s + d.revenue, 0);
     const growthRate = prev30 > 0 ? ((last30 - prev30) / prev30) * 100 : 0;
 
-    // Dự báo forecastDays ngày tới
     const forecast: { date: string; revenue: number; isHoliday: boolean }[] = [];
     for (let i = 1; i <= forecastDays; i++) {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + i);
       const dateStr = futureDate.toISOString().slice(0, 10);
 
-      // Giá trị cơ bản từ Linear Regression
       let predicted = lastWma + slope * i;
 
-      // Áp thêm seasonality từ ngày lễ / cuối tuần
       const seasonMultiplier = getPriceMultiplierForDate(dateStr);
       predicted = Math.max(0, predicted * seasonMultiplier);
 
@@ -290,7 +267,7 @@ export class ReportsService {
       slope > 50000 ? 'up' : slope < -50000 ? 'down' : 'stable';
 
     return {
-      historical: historical.slice(-30), // Chỉ gửi 30 ngày gần nhất lên FE
+      historical: historical.slice(-30),
       forecast,
       trend,
       growthRate: Math.round(growthRate * 10) / 10,
@@ -299,17 +276,7 @@ export class ReportsService {
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // AI FEATURE 2: Route Insights (phân tích và khuyến nghị theo tuyến)
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Phân tích dữ liệu 90 ngày qua theo từng tuyến đường:
-   * - Tỷ lệ lấp đầy trung bình
-   * - Doanh thu / chuyến
-   * - Ngày cao điểm trong tuần
-   * - Khuyến nghị: Tăng tần suất / Tăng giá / Kích cầu
-   */
   async getRouteInsights() {
     const today = new Date();
     const fromDate = new Date(today);
@@ -317,7 +284,6 @@ export class ReportsService {
     const fromStr = fromDate.toISOString().slice(0, 10);
     const toStr = today.toISOString().slice(0, 10);
 
-    // Query trip stats theo tuyến trong 90 ngày
     const tripData = await this.tripsRepo
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.schedule', 's')
@@ -330,7 +296,6 @@ export class ReportsService {
       .groupBy('t.id')
       .getRawAndEntities();
 
-    // Query doanh thu theo tuyến
     const revenueData = await this.paymentsRepo
       .createQueryBuilder('p')
       .leftJoin('p.ticket', 'ticket')
@@ -354,7 +319,6 @@ export class ReportsService {
       if (r.routeId) revenueMap[r.routeId] = Number(r.totalRevenue || 0);
     });
 
-    // Gom nhóm theo tuyến
     interface RouteAgg {
       routeId: number;
       origin: string;
@@ -408,7 +372,6 @@ export class ReportsService {
       );
       const peakDay = DAY_NAMES[peakDayIdx];
 
-      // Khuyến nghị AI
       let recommendation: 'increase_frequency' | 'increase_price' | 'boost_demand';
       let recommendationLabel: string;
       let recommendationColor: 'green' | 'orange' | 'red';
@@ -443,29 +406,16 @@ export class ReportsService {
       };
     });
 
-    // Sắp xếp: tỷ lệ lấp đầy cao nhất lên đầu
     insights.sort((a, b) => b.avgOccupancy - a.avgOccupancy);
 
     return insights;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // AI FEATURE 3: Phân tích khách hàng RFM (Recency · Frequency · Monetary)
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Phân loại từng khách hàng theo 3 chỉ số RFM:
-   * R – Recency: ngày đặt vé cuối cách đây bao lâu
-   * F – Frequency: số lần đặt vé thành công (CONFIRMED)
-   * M – Monetary: tổng số tiền đã thanh toán (SUCCESS)
-   * → Gán nhãn: VIP / Trung thành / Tiềm năng / Cần kích cầu
-   */
   async getRfmSegments() {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
 
-    // Query tổng hợp theo từng user
-    // Fix: GROUP BY phải bao gồm các cột non-aggregate (MySQL ONLY_FULL_GROUP_BY)
     const raw = await this.ticketsRepo
       .createQueryBuilder('t')
       .leftJoin('t.user', 'u')
@@ -495,13 +445,11 @@ export class ReportsService {
       const frequency = Number(r.frequency || 0);
       const monetary = Number(r.monetary || 0);
 
-      // Scoring 1–3 cho mỗi chiều
       const rScore = recencyDays <= 7 ? 3 : recencyDays <= 30 ? 2 : 1;
       const fScore = frequency >= 5 ? 3 : frequency >= 2 ? 2 : 1;
       const mScore = monetary >= 2_000_000 ? 3 : monetary >= 500_000 ? 2 : 1;
       const total = rScore + fScore + mScore;
 
-      // Gán nhãn
       let segment: string;
       let segmentColor: 'gold' | 'blue' | 'green' | 'red';
       let segmentIcon: string;
@@ -541,7 +489,6 @@ export class ReportsService {
       };
     });
 
-    // Tổng hợp theo phân khúc cho biểu đồ tròn
     const summary = {
       vip: segments.filter((s) => s.segment === 'VIP').length,
       loyal: segments.filter((s) => s.segment === 'Trung thành').length,
@@ -552,21 +499,11 @@ export class ReportsService {
     return { segments, summary };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // AI FEATURE 4: Cảnh báo chuyến ít khách & Gợi ý khuyến mãi
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Quét các chuyến sắp khởi hành (2–14 ngày tới):
-   * - So sánh tỷ lệ lấp đầy hiện tại với trung bình lịch sử cùng tuyến (90 ngày)
-   * - Nếu < 60% kỳ vọng → cảnh báo LOW DEMAND
-   * - Đề xuất % giảm giá phù hợp
-   */
   async getLowDemandAlerts() {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
 
-    // Ngày từ ngày mai đến 14 ngày tới
     const fromFuture = new Date(today);
     fromFuture.setDate(today.getDate() + 1);
     const toFuture = new Date(today);
@@ -574,7 +511,6 @@ export class ReportsService {
     const fromFutureStr = fromFuture.toISOString().slice(0, 10);
     const toFutureStr = toFuture.toISOString().slice(0, 10);
 
-    // Lấy tỷ lệ lấp đầy lịch sử 90 ngày theo từng tuyến
     const fromPast = new Date(today);
     fromPast.setDate(today.getDate() - 89);
     const fromPastStr = fromPast.toISOString().slice(0, 10);
@@ -595,7 +531,6 @@ export class ReportsService {
       .groupBy('r.id')
       .getRawMany();
 
-    // Tính avgOccupancy theo tuyến
     const avgOccMap: Record<number, number> = {};
     historicalRaw.forEach((r) => {
       const cap = Number(r.totalCapacity || 0);
@@ -603,7 +538,6 @@ export class ReportsService {
       avgOccMap[Number(r.routeId)] = cap > 0 ? Math.round((pax / cap) * 100) : 0;
     });
 
-    // Lấy các chuyến sắp tới với số ghế hiện tại
     const upcomingTrips = await this.tripsRepo
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.schedule', 's')
@@ -629,23 +563,17 @@ export class ReportsService {
 
         const expectedOccupancy = avgOccMap[route.id] ?? -1;
 
-        // Chỉ cảnh báo nếu:
-        // (A) Có historical data VÀ đang thấp hơn 60% kỳ vọng
-        // (B) Không có historical data NHƯNG chuyến trong 3 ngày tới VÀ 0 đặt chỗ
         const daysUntilDeparture = Math.floor(
           (new Date(trip.departureDate).getTime() - today.getTime()) / 86_400_000,
         );
 
         if (expectedOccupancy >= 0) {
-          // Case A: có historical data
           const threshold = expectedOccupancy * 0.6;
-          if (currentOccupancy >= threshold) return null; // đủ tốt, không cảnh báo
+          if (currentOccupancy >= threshold) return null;
         } else {
-          // Case B: không có historical data — chỉ alert nếu sắp khởi hành và 0 booking
           if (daysUntilDeparture > 3 || currentOccupancy > 0) return null;
         }
 
-        // Tính % đề xuất giảm giá (tối đa 25%)
         let suggestedDiscount = 0;
         if (expectedOccupancy > 0) {
           suggestedDiscount = Math.min(
@@ -653,11 +581,9 @@ export class ReportsService {
             Math.round((1 - currentOccupancy / Math.max(expectedOccupancy, 1)) * 20),
           );
         } else {
-          // Không có historical data nhưng sắp khởi hành → gợi ý giảm cố định
           suggestedDiscount = 10;
         }
 
-        // Mức độ nghiêm trọng
         const severity: 'high' | 'medium' | 'low' =
           currentOccupancy < 15 ? 'high' : currentOccupancy < 30 ? 'medium' : 'low';
 
@@ -672,7 +598,7 @@ export class ReportsService {
           bookedSeats,
           availableSeats,
           currentOccupancy,
-          expectedOccupancy: Math.max(0, expectedOccupancy), // normalize -1 → 0 trong response
+          expectedOccupancy: Math.max(0, expectedOccupancy),
           suggestedDiscount,
           severity,
           basePrice: Number(route.basePrice || 0),

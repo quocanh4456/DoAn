@@ -26,7 +26,7 @@ export class TicketsController {
     private paymentsService: PaymentsService,
   ) {}
 
-  /** Guest: xem thông tin vé để thanh toán (không cần đăng nhập) */
+  
   @Get(':id/guest-info')
   getGuestTicket(
     @Param('id', ParseIntPipe) id: number,
@@ -35,7 +35,7 @@ export class TicketsController {
     return this.ticketsService.getGuestTicket(id, email);
   }
 
-  /** Guest: tạo link thanh toán PayOS (không cần đăng nhập) */
+  
   @Post(':id/guest-payment')
   createGuestPayment(
     @Param('id', ParseIntPipe) id: number,
