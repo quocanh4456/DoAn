@@ -98,6 +98,8 @@ CREATE TABLE tickets (
     pick_up_location VARCHAR(255) NOT NULL,
     drop_off_location VARCHAR(255) NOT NULL,
     total_price DECIMAL(12, 0) NOT NULL,
+    promo_code VARCHAR(30) NULL,
+    discount_amount DECIMAL(12, 0) DEFAULT 0,
     status VARCHAR(20) DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

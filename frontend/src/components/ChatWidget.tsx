@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Bot, X, Send, Minimize2, Loader2, MessageCircle, ChevronDown, Sparkles } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface Message {
   id: string;
@@ -15,10 +16,24 @@ async function sendChatMessage(
   query: string,
   conversationId: string,
 ): Promise<{ answer: string; conversation_id: string }> {
+  let userId: number | null = null;
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const parsed = JSON.parse(userStr);
+      if (parsed?.id) {
+        userId = Number(parsed.id);
+      }
+    }
+  } catch { /* ignore parse errors */ }
+
+  console.log('[ChatWidget] Sending message with userId:', userId);
+
   const { data } = await axios.post(`${API_BASE}/chatbot/message`, {
     query,
     conversation_id: conversationId || undefined,
     user: 'vinacoach-web-user',
+    ...(userId ? { userId } : {}),
   });
   return data;
 }
@@ -30,6 +45,11 @@ function renderMarkdown(text: string): string {
     .replace(/(?<!^\s*)\*(?!\s)(.+?)(?<!\s)\*/g, '<em>$1</em>')
     .replace(/^\* (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul style="margin:6px 0 6px 16px;padding:0;list-style:disc">${m}</ul>`)
+    
+    .replace(
+      /\[(.+?)\]\((https?:\/\/[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:white;text-decoration:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;margin:6px 0;box-shadow:0 2px 8px rgba(249,115,22,0.35)">💳 $1</a>'
+    )
     .replace(/\n/g, '<br>');
 }
 
@@ -81,7 +101,7 @@ export function ChatWidget() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '👋 Xin chào! Tôi là trợ lý ảo VinaCoach. Tôi có thể giúp bạn tra cứu chuyến xe, giá vé, lịch trình và giải đáp mọi thắc mắc. Hãy hỏi tôi bất cứ điều gì!',
+      content: '👋 Xin chào! Tôi là trợ lý ảo VinaCoach. Tôi có thể giúp bạn:\n- 🔍 Tra cứu chuyến xe, giá vé, lịch trình\n- 🎫 **Đặt vé trực tiếp** qua chat\n\nVí dụ: *"Đặt 2 vé HCM đi Đà Lạt ngày mai"*\nHãy hỏi tôi bất cứ điều gì!',
       timestamp: new Date(),
     },
   ]);
@@ -162,10 +182,12 @@ export function ChatWidget() {
     }
   };
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   const quickQuestions = [
+    'Đặt 1 vé HCM đi Đà Lạt ngày mai',
     'Chuyến xe từ HCM đến Đà Lạt?',
     'Giá vé xe khách?',
-    'Cách đặt vé online?',
   ];
 
   return (

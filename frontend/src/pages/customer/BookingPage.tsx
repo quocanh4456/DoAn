@@ -15,147 +15,7 @@ import { toast } from 'sonner';
 import type { Trip, Ticket } from '@/types';
 import { Input } from '@/components/ui/input';
 
-const PICKUP_LOCATIONS: Record<string, string[]> = {
-  'TP. Hồ Chí Minh': [
-    'Bến xe Miền Đông (Đinh Tiên Hoàng, Q. Bình Thạnh)',
-    'Bến xe Miền Tây (Kinh Dương Vương, Q. 6)',
-    'Văn phòng Quận 1 (Phạm Ngũ Lão)',
-    'Văn phòng Quận 7 (Nguyễn Thị Thập)',
-    'Văn phòng Gò Vấp (Nguyễn Kiệm)',
-    'Văn phòng Bình Dương (QL 13)',
-  ],
-  'Hà Nội': [
-    'Bến xe Mỹ Đình (Phạm Hùng, Nam Từ Liêm)',
-    'Bến xe Giáp Bát (Giải Phóng, Hoàng Mai)',
-    'Bến xe Nước Ngầm (Ngọc Hồi, Hoàng Mai)',
-    'Văn phòng Hoàn Kiếm (Đinh Lễ)',
-    'Văn phòng Cầu Giấy (Trần Thái Tông)',
-  ],
-  'Đà Nẵng': [
-    'Bến xe Đà Nẵng (Tôn Đức Thắng)',
-    'Văn phòng Hải Châu (Điện Biên Phủ)',
-    'Văn phòng Thanh Khê (Trần Cao Vân)',
-  ],
-};
 
-const DROPOFF_LOCATIONS: Record<string, string[]> = {
-  'Đà Lạt': [
-    'Bến xe Đà Lạt (Nguyễn Thị Minh Khai)',
-    'Trung tâm thành phố (Hòa Bình)',
-    'Khu vực Hồ Xuân Hương',
-    'Khu vực Thác Cam Ly',
-  ],
-  'Nha Trang': [
-    'Bến xe Nha Trang (23 tháng 10)',
-    'Trung tâm thành phố (Trần Phú)',
-    'Khu vực Vinpearl (Vĩnh Phước)',
-    'Khu vực Phạm Văn Đồng',
-  ],
-  'Vũng Tàu': [
-    'Bến xe Vũng Tàu (Nguyễn Ngọc Nhựt)',
-    'Trung tâm thành phố (Lê Lợi)',
-    'Khu vực Bãi Trước (Thùy Vân)',
-    'Khu vực Bãi Sau (Thùy Vân)',
-  ],
-  'Cần Thơ': [
-    'Bến xe Cần Thơ (Nguyễn Trãi)',
-    'Trung tâm thành phố (Hòa Bình)',
-    'Khu vực Ninh Kiều',
-    'Khu vực Cái Răng',
-  ],
-  'Phan Thiết': [
-    'Bến xe Phan Thiết (Hùng Vương)',
-    'Trung tâm thành phố (Trần Hưng Đạo)',
-    'Khu vực Mũi Né',
-  ],
-  'Hải Phòng': [
-    'Bến xe Hải Phòng (Lạch Tray)',
-    'Trung tâm thành phố (Điện Biên Phủ)',
-    'Khu vực Đồ Sơn',
-  ],
-  'Sapa': [
-    'Bến xe Sapa (trung tâm thị trấn)',
-    'Trung tâm Sapa (Fansipan Plaza)',
-    'Khu vực Cầu Mây',
-  ],
-  'Huế': [
-    'Bến xe Huế (An Hòa)',
-    'Bến xe Phía Nam Huế (Nguyễn Hoàng)',
-    'Trung tâm thành phố (Lê Lợi)',
-    'Khu vực Đại Nội',
-  ],
-};
-
-
-function getPickupOptions(origin: string): string[] {
-  const key = Object.keys(PICKUP_LOCATIONS).find((k) =>
-    origin?.includes(k) || k.includes(origin),
-  );
-  return key ? PICKUP_LOCATIONS[key] : [];
-}
-
-
-function getDropoffOptions(destination: string): string[] {
-  const key = Object.keys(DROPOFF_LOCATIONS).find((k) =>
-    destination?.includes(k) || k.includes(destination),
-  );
-  return key ? DROPOFF_LOCATIONS[key] : [];
-}
-
-function LocationSelect({
-  id,
-  value,
-  onChange,
-  options,
-  placeholder,
-  color,
-}: {
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  placeholder: string;
-  color: 'green' | 'red';
-}) {
-  const borderColor = color === 'green' ? '#22c55e' : '#ef4444';
-  const bgColor = color === 'green' ? '#f0fdf4' : '#fef2f2';
-
-  return (
-    <div className="relative">
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required
-        style={{
-          appearance: 'none',
-          width: '100%',
-          height: '44px',
-          padding: '0 40px 0 14px',
-          borderRadius: '8px',
-          border: `1.5px solid ${value ? borderColor : '#e2e8f0'}`,
-          background: value ? bgColor : '#fff',
-          fontSize: '14px',
-          color: value ? '#1e293b' : '#94a3b8',
-          cursor: 'pointer',
-          transition: 'border-color 0.15s, background 0.15s',
-          outline: 'none',
-        }}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none h-4 w-4"
-        style={{ color: value ? borderColor : '#94a3b8' }}
-      />
-    </div>
-  );
-}
 
 export function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -323,8 +183,6 @@ export function BookingPage() {
 
   const origin = trip.schedule?.route?.origin ?? '';
   const destination = trip.schedule?.route?.destination ?? '';
-  const pickupOptions = getPickupOptions(origin);
-  const dropoffOptions = getDropoffOptions(destination);
   const basePrice = dynamicPrice ? dynamicPrice.finalPrice : Number(trip.schedule?.route?.basePrice || 0);
   const hasAIPrice = dynamicPrice && dynamicPrice.totalMultiplier > 1;
 
@@ -468,25 +326,12 @@ export function BookingPage() {
                   <MapPin className="h-3.5 w-3.5 inline mr-1 text-green-500" />
                   Điểm đón <span className="text-xs text-muted-foreground font-normal">({origin})</span>
                 </Label>
-                {pickupOptions.length > 0 ? (
-                  <LocationSelect
-                    id="pickUp"
-                    value={pickUpLocation}
-                    onChange={setPickUpLocation}
-                    options={pickupOptions}
-                    placeholder="-- Chọn điểm đón --"
-                    color="green"
-                  />
-                ) : (
-                  <div className="text-sm text-muted-foreground bg-muted rounded-lg px-4 py-3">
-                    Chưa có điểm đón cố định cho tuyến này.
-                  </div>
-                )}
-                {pickUpLocation && (
-                  <p className="text-xs text-green-600 flex items-center gap-1 ml-1">
-                    <MapPin className="h-3 w-3" /> {pickUpLocation}
-                  </p>
-                )}
+                <Input
+                  id="pickUp"
+                  value={pickUpLocation}
+                  onChange={(e) => setPickUpLocation(e.target.value)}
+                  placeholder={`Nhập địa chỉ đón tại ${origin}...`}
+                />
               </div>
 
               <div className="space-y-2">
@@ -494,25 +339,12 @@ export function BookingPage() {
                   <MapPin className="h-3.5 w-3.5 inline mr-1 text-red-500" />
                   Điểm trả <span className="text-xs text-muted-foreground font-normal">({destination})</span>
                 </Label>
-                {dropoffOptions.length > 0 ? (
-                  <LocationSelect
-                    id="dropOff"
-                    value={dropOffLocation}
-                    onChange={setDropOffLocation}
-                    options={dropoffOptions}
-                    placeholder="-- Chọn điểm trả --"
-                    color="red"
-                  />
-                ) : (
-                  <div className="text-sm text-muted-foreground bg-muted rounded-lg px-4 py-3">
-                    Chưa có điểm trả cố định cho tuyến này.
-                  </div>
-                )}
-                {dropOffLocation && (
-                  <p className="text-xs text-red-500 flex items-center gap-1 ml-1">
-                    <MapPin className="h-3 w-3" /> {dropOffLocation}
-                  </p>
-                )}
+                <Input
+                  id="dropOff"
+                  value={dropOffLocation}
+                  onChange={(e) => setDropOffLocation(e.target.value)}
+                  placeholder={`Nhập địa chỉ trả tại ${destination}...`}
+                />
               </div>
 
               <div className="space-y-2">

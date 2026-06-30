@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ChatMessageDto {
@@ -18,4 +18,9 @@ export class ChatMessageDto {
   @IsString()
   @IsOptional()
   user?: string;
+
+  @ApiPropertyOptional({ description: 'ID user đã đăng nhập (để đặt vé qua chatbot)' })
+  @IsNumber()
+  @IsOptional()
+  userId?: number;
 }

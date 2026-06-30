@@ -13,7 +13,7 @@ export class ChatbotController {
   @ApiOperation({
     summary: 'Gửi tin nhắn tới chatbot AI (Dify)',
     description:
-      'Nhận tin nhắn từ client, forward tới Dify API và trả về phản hồi. API key được bảo mật ở phía server.',
+      'Nhận tin nhắn từ client, forward tới Dify API và trả về phản hồi. Hỗ trợ đặt vé tự động nếu gửi kèm userId.',
   })
   @ApiResponse({
     status: 200,
@@ -32,3 +32,4 @@ export class ChatbotController {
     return this.chatbotService.sendMessage(dto);
   }
 }
+
