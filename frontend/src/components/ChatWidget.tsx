@@ -40,15 +40,14 @@ async function sendChatMessage(
 
 function renderMarkdown(text: string): string {
   return text
-    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">')
+    .replace(/^---$/gm, '<hr>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/(?<!^\s*)\*(?!\s)(.+?)(?<!\s)\*/g, '<em>$1</em>')
     .replace(/^\* (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul style="margin:6px 0 6px 16px;padding:0;list-style:disc">${m}</ul>`)
-    
+    .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`)
     .replace(
       /\[(.+?)\]\((https?:\/\/[^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:white;text-decoration:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;margin:6px 0;box-shadow:0 2px 8px rgba(249,115,22,0.35)">💳 $1</a>'
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="vinabot-payment-btn">💳 $1</a>'
     )
     .replace(/\n/g, '<br>');
 }
@@ -196,76 +195,74 @@ export function ChatWidget() {
         /* Layout */
         .vinabot-fab {
           position: fixed;
-          bottom: 28px;
-          right: 28px;
+          bottom: 24px;
+          right: 24px;
           z-index: 9999;
           display: flex;
           flex-direction: column;
           align-items: flex-end;
-          gap: 12px;
+          gap: 16px;
           pointer-events: none;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
         /* FAB Button */
         .vinabot-toggle {
-          width: 58px;
-          height: 58px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
-          background: linear-gradient(135deg, oklch(0.546 0.19 264), oklch(0.45 0.22 275));
+          background: #1e3a8a; /* VinaCoach Blue */
           border: none;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          box-shadow: 0 8px 32px oklch(0.546 0.19 264 / 40%), 0 2px 8px rgba(0,0,0,0.15);
-          transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+          box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background 0.2s;
           position: relative;
           pointer-events: auto;
         }
         .vinabot-toggle:hover {
-          transform: scale(1.1) translateY(-2px);
-          box-shadow: 0 12px 40px oklch(0.546 0.19 264 / 50%), 0 4px 12px rgba(0,0,0,0.2);
+          transform: scale(1.05) translateY(-2px);
+          box-shadow: 0 6px 16px rgba(30, 58, 138, 0.5);
+          background: #2563eb;
         }
-        .vinabot-toggle:active { transform: scale(0.96); }
+        .vinabot-toggle:active { transform: scale(0.95); }
 
         /* Badge */
         .vinabot-badge {
           position: absolute;
-          top: -4px;
-          right: -4px;
-          background: oklch(0.577 0.245 27.325);
+          top: 0;
+          right: 0;
+          background: #ea580c; /* Orange */
           color: white;
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 700;
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 2px solid white;
-          animation: vinabot-pulse 1.5s infinite;
-        }
-        @keyframes vinabot-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.15); }
+          border: 2px solid #fff;
+          box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3);
         }
 
         /* Panel */
         .vinabot-panel {
-          width: 390px;
-          max-height: min(82vh, 680px);
-          min-height: 520px;
-          background: oklch(0.985 0.002 264);
-          border-radius: 20px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+          width: 380px;
+          max-height: min(80vh, 700px);
+          min-height: 550px;
+          background: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04);
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          border: 1px solid oklch(0.915 0.02 264);
+          border: 1px solid #e5e7eb;
           transform-origin: bottom right;
-          transition: opacity 0.25s ease, transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+          transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .vinabot-panel--open {
           opacity: 1;
@@ -274,26 +271,27 @@ export function ChatWidget() {
         }
         .vinabot-panel--closed {
           opacity: 0;
-          transform: scale(0.85) translateY(20px);
+          transform: scale(0.9) translateY(20px);
           pointer-events: none;
           min-height: 0;
         }
 
         /* Header */
         .vinabot-header {
-          background: linear-gradient(135deg, oklch(0.546 0.19 264), oklch(0.45 0.22 275));
-          padding: 14px 16px;
+          background: #1e3a8a; /* VinaCoach Blue */
+          padding: 16px 20px;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           color: white;
           flex-shrink: 0;
         }
         .vinabot-header-avatar {
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
-          background: rgba(255,255,255,0.2);
+          background: white;
+          color: #1e3a8a;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -301,87 +299,83 @@ export function ChatWidget() {
         }
         .vinabot-header-info { flex: 1; min-width: 0; }
         .vinabot-header-name {
-          font-weight: 700;
-          font-size: 14px;
+          font-weight: 600;
+          font-size: 15px;
           line-height: 1.2;
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 6px;
         }
         .vinabot-header-status {
-          font-size: 11px;
-          opacity: 0.8;
+          font-size: 12px;
+          opacity: 0.9;
           display: flex;
           align-items: center;
-          gap: 4px;
-          margin-top: 2px;
+          gap: 6px;
+          margin-top: 4px;
         }
         .vinabot-status-dot {
-          width: 6px;
-          height: 6px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           background: #4ade80;
           display: inline-block;
-          animation: vinabot-blink 2s infinite;
-        }
-        @keyframes vinabot-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
         }
         .vinabot-header-actions { display: flex; gap: 4px; }
         .vinabot-icon-btn {
-          background: rgba(255,255,255,0.15);
+          background: transparent;
           border: none;
-          border-radius: 8px;
-          width: 28px;
-          height: 28px;
+          border-radius: 6px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: rgba(255,255,255,0.8);
           cursor: pointer;
-          transition: background 0.15s;
+          transition: background 0.2s, color 0.2s;
         }
-        .vinabot-icon-btn:hover { background: rgba(255,255,255,0.28); }
+        .vinabot-icon-btn:hover { background: rgba(255,255,255,0.1); color: white; }
 
-        /* Messages area — flex:1 + min-height:0 allows proper shrink/grow */
+        /* Messages area */
         .vinabot-messages {
           flex: 1;
           min-height: 0;
           overflow-y: auto;
-          padding: 16px;
+          padding: 20px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 16px;
           scroll-behavior: smooth;
-          overscroll-behavior: contain;
+          background: #f8fafc;
         }
-        .vinabot-messages::-webkit-scrollbar { width: 5px; }
+        .vinabot-messages::-webkit-scrollbar { width: 6px; }
         .vinabot-messages::-webkit-scrollbar-track { background: transparent; }
         .vinabot-messages::-webkit-scrollbar-thumb {
-          background: oklch(0.88 0.03 264);
-          border-radius: 99px;
+          background: #cbd5e1;
+          border-radius: 10px;
         }
-        .vinabot-messages::-webkit-scrollbar-thumb:hover {
-          background: oklch(0.75 0.06 264);
-        }
-        /* Markdown content styles */
-        .vinabot-md { margin: 0; word-break: break-word; line-height: 1.6; }
-        .vinabot-md ul { margin: 6px 0 6px 18px; padding: 0; }
-        .vinabot-md li { margin: 3px 0; }
-        .vinabot-md strong { font-weight: 700; }
-        .vinabot-md em { font-style: italic; }
-        .vinabot-md br { display: block; content: ''; margin: 2px 0; }
+        .vinabot-messages::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* Message rows */
-        .vinabot-message { display: flex; align-items: flex-end; gap: 8px; }
+        .vinabot-message { 
+          display: flex; 
+          align-items: flex-end; 
+          gap: 10px; 
+          animation: slideUp 0.3s ease forwards;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         .vinabot-message--user { flex-direction: row-reverse; }
         .vinabot-message--assistant { flex-direction: row; }
+        
         .vinabot-avatar {
-          width: 26px;
-          height: 26px;
+          width: 30px;
+          height: 30px;
           border-radius: 50%;
-          background: linear-gradient(135deg, oklch(0.546 0.19 264), oklch(0.45 0.22 275));
+          background: #1e3a8a;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -391,136 +385,180 @@ export function ChatWidget() {
 
         /* Bubbles */
         .vinabot-bubble {
-          max-width: 78%;
-          padding: 10px 13px;
+          max-width: 80%;
+          padding: 12px 16px;
           border-radius: 16px;
-          font-size: 13.5px;
-          line-height: 1.55;
+          font-size: 14px;
+          line-height: 1.5;
           position: relative;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .vinabot-bubble p { margin: 0; white-space: pre-wrap; word-break: break-word; }
         .vinabot-bubble--user {
-          background: linear-gradient(135deg, oklch(0.546 0.19 264), oklch(0.45 0.22 275));
+          background: #1e3a8a;
           color: white;
           border-bottom-right-radius: 4px;
         }
         .vinabot-bubble--assistant {
-          background: oklch(0.96 0.01 264);
-          color: oklch(0.195 0.02 264);
+          background: #ffffff;
+          color: #1e293b;
           border-bottom-left-radius: 4px;
-          border: 1px solid oklch(0.915 0.02 264);
+          border: 1px solid #e2e8f0;
         }
         .vinabot-time {
           display: block;
-          font-size: 10px;
-          opacity: 0.55;
-          margin-top: 4px;
+          font-size: 11px;
+          color: #94a3b8;
+          margin-top: 6px;
           text-align: right;
+          font-weight: 500;
+        }
+
+        /* Markdown content styling */
+        .vinabot-md { margin: 0; word-break: break-word; line-height: 1.6; }
+        .vinabot-md ul { margin: 8px 0 8px 20px; padding: 0; }
+        .vinabot-md li { margin: 4px 0; }
+        .vinabot-md strong { font-weight: 600; color: #0f172a; }
+        .vinabot-md em { font-style: italic; }
+        .vinabot-md br { display: block; content: ''; margin: 4px 0; }
+        .vinabot-md hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+        
+        .vinabot-payment-btn {
+          display: inline-block;
+          background: #ea580c;
+          color: white !important;
+          text-decoration: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          margin: 10px 0;
+          box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2);
+          transition: background 0.2s, transform 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .vinabot-payment-btn:hover {
+          background: #c2410c;
+          transform: translateY(-1px);
         }
 
         /* Typing indicator */
-        .vinabot-typing { display: flex; gap: 4px; align-items: center; height: 16px; padding: 2px 0; }
+        .vinabot-typing { display: flex; gap: 5px; align-items: center; height: 18px; padding: 4px 2px; }
         .vinabot-typing span {
-          width: 7px;
-          height: 7px;
-          background: oklch(0.546 0.19 264);
+          width: 6px;
+          height: 6px;
+          background: #94a3b8;
           border-radius: 50%;
-          animation: vinabot-bounce 1.2s infinite;
+          animation: vinabot-bounce 1.4s infinite ease-in-out both;
         }
-        .vinabot-typing span:nth-child(2) { animation-delay: 0.2s; }
-        .vinabot-typing span:nth-child(3) { animation-delay: 0.4s; }
+        .vinabot-typing span:nth-child(1) { animation-delay: -0.32s; }
+        .vinabot-typing span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes vinabot-bounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
-          40% { transform: translateY(-6px); opacity: 1; }
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1); }
         }
 
         /* Quick questions */
         .vinabot-quick {
-          padding: 0 14px 10px;
+          padding: 0 20px 12px;
           display: flex;
-          gap: 6px;
+          gap: 8px;
           flex-wrap: wrap;
-          border-bottom: 1px solid oklch(0.915 0.02 264);
+          background: #f8fafc;
         }
         .vinabot-quick-btn {
-          font-size: 11.5px;
-          padding: 4px 10px;
+          font-size: 12px;
+          padding: 8px 14px;
           border-radius: 99px;
-          border: 1px solid oklch(0.546 0.19 264 / 35%);
-          background: oklch(0.546 0.19 264 / 8%);
-          color: oklch(0.546 0.19 264);
+          border: 1px solid #e2e8f0;
+          background: white;
+          color: #1e3a8a;
+          font-weight: 500;
           cursor: pointer;
-          transition: all 0.15s;
-          white-space: nowrap;
+          transition: all 0.2s;
         }
         .vinabot-quick-btn:hover {
-          background: oklch(0.546 0.19 264);
-          color: white;
+          background: #eff6ff;
+          border-color: #bfdbfe;
         }
 
         /* Input area */
         .vinabot-input-area {
-          padding: 12px 14px;
-          background: oklch(0.985 0.002 264);
-          border-top: 1px solid oklch(0.915 0.02 264);
+          padding: 16px 20px;
+          background: #ffffff;
+          border-top: 1px solid #e5e7eb;
           display: flex;
           align-items: flex-end;
-          gap: 8px;
+          gap: 12px;
           flex-shrink: 0;
         }
         .vinabot-textarea {
           flex: 1;
           resize: none;
-          border: 1.5px solid oklch(0.915 0.02 264);
-          border-radius: 12px;
-          padding: 9px 12px;
-          font-size: 13.5px;
+          border: 1px solid #e2e8f0;
+          border-radius: 24px;
+          padding: 12px 16px;
+          font-size: 14px;
           font-family: inherit;
-          background: white;
-          color: oklch(0.195 0.02 264);
+          background: #f8fafc;
+          color: #1e293b;
           outline: none;
-          transition: border-color 0.15s;
-          min-height: 40px;
-          max-height: 100px;
-          line-height: 1.4;
+          transition: all 0.2s;
+          min-height: 44px;
+          max-height: 120px;
+          line-height: 1.5;
         }
-        .vinabot-textarea:focus { border-color: oklch(0.546 0.19 264); }
-        .vinabot-textarea::placeholder { color: oklch(0.50 0.03 264); }
+        .vinabot-textarea:focus { 
+          border-color: #1e3a8a; 
+          background: #ffffff;
+        }
+        .vinabot-textarea::placeholder { color: #94a3b8; }
 
         .vinabot-send {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
           border: none;
-          background: linear-gradient(135deg, oklch(0.546 0.19 264), oklch(0.45 0.22 275));
+          background: #1e3a8a;
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           flex-shrink: 0;
-          transition: opacity 0.15s, transform 0.15s;
+          transition: background 0.2s, transform 0.2s;
         }
-        .vinabot-send:disabled { opacity: 0.45; cursor: not-allowed; }
-        .vinabot-send:not(:disabled):hover { transform: scale(1.08); }
+        .vinabot-send:disabled { 
+          background: #f1f5f9; 
+          color: #cbd5e1;
+          cursor: not-allowed; 
+        }
+        .vinabot-send:not(:disabled):hover { 
+          background: #2563eb;
+        }
         .vinabot-send:not(:disabled):active { transform: scale(0.95); }
 
         /* Footer */
         .vinabot-footer {
           text-align: center;
-          font-size: 10.5px;
-          color: oklch(0.50 0.03 264);
-          padding: 6px 0 8px;
+          font-size: 11px;
+          color: #94a3b8;
+          padding: 8px 0 12px;
+          background: #ffffff;
+          font-weight: 500;
         }
 
         /* Responsive */
         @media (max-width: 480px) {
           .vinabot-panel {
-            width: calc(100vw - 24px);
-            min-height: 0;
-            max-height: 75vh;
+            width: calc(100vw - 32px);
+            max-height: 80vh;
+            border-radius: 16px;
+            bottom: 80px;
           }
-          .vinabot-fab { bottom: 16px; right: 12px; }
+          .vinabot-fab { bottom: 16px; right: 16px; }
         }
       `}</style>
 
