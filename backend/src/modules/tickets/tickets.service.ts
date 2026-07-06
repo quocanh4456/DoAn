@@ -37,8 +37,10 @@ export class TicketsService {
     private promotionsService: PromotionsService,
   ) {
     this.redis = new Redis({
-      host: this.configService.get('REDIS_HOST', 'localhost'),
+      host: this.configService.get('REDIS_HOST', '127.0.0.1'), // Dùng 127.0.0.1 thay vì localhost để tránh lỗi IPv6 timeout trên Windows
       port: this.configService.get<number>('REDIS_PORT', 6379),
+      maxRetriesPerRequest: 1, // Chỉ thử lại 1 lần nếu không kết nối được
+      enableOfflineQueue: false, // Báo lỗi ngay lập tức nếu không có kết nối Redis
     });
 
     this.redis.on('error', () => {
